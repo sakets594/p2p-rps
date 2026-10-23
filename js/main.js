@@ -23,7 +23,21 @@ const DEFAULT_ROOM_NAME = 'Kali Pahadi Ke Pichhe';
 const NAME_KEY = 'rps-name';
 const loadName = () => { try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } };
 const saveName = (n) => { try { localStorage.setItem(NAME_KEY, n); } catch { /* private mode: fine */ } };
-$('name-input').value = loadName();
+
+// The name box holds a real value the player erases and retypes, not a hint.
+// Until they edit it, it follows what they are doing: Kalicharan when creating,
+// Ramcharan when joining (so two players never both start as the same name).
+let nameEdited = false;
+const saved = loadName();
+if (saved) { $('name-input').value = saved; nameEdited = true; }
+
+function syncDefaultName() {
+  if (nameEdited) return;
+  const joining = $('code-input').value.trim() !== '' || !$('invite-note').hidden;
+  $('name-input').value = joining ? DEFAULT_JOINER_NAME : DEFAULT_CREATOR_NAME;
+}
+$('name-input').addEventListener('input', () => { nameEdited = true; });
+$('code-input').addEventListener('input', syncDefaultName);
 
 function inviteLink(code) {
   const url = new URL(location.href);
@@ -41,7 +55,7 @@ function showHomeError(text) {
 function enterRoom(code, {creator = false} = {}) {
   roomId = code;
   myName = cleanName($('name-input').value, creator ? DEFAULT_CREATOR_NAME : DEFAULT_JOINER_NAME);
-  if ($('name-input').value.trim()) saveName(myName);
+  if (nameEdited && $('name-input').value.trim()) saveName(myName); // never save the defaults
   $('label-me').textContent = myName;
   $('label-them').textContent = 'Friend';
   history.replaceState(null, '', inviteLink(code));
@@ -264,5 +278,6 @@ if (fromUrl) {
   $('create-block').hidden = true;
   $('invite-note').hidden = false;
   $('invite-note').textContent = `You\u2019ve been invited to room ${fromUrl}. Enter your name and tap Join.`;
+  syncDefaultName();
   $('name-input').focus();
 }
