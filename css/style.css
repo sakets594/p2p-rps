@@ -59,3 +59,14 @@ input { flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border-radius:
 
 .hands { border-radius: 12px; background: radial-gradient(circle at 50% 35%, var(--bg), var(--card)); }
 .win { color: var(--good); } .lose { color: var(--bad); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -8px; }
+.chip { padding: 4px 10px; font-size: .85rem; border-radius: 999px; background: var(--bg); }
+
+.recent-rooms { display: flex; flex-direction: column; gap: 6px; }
+.recent-rooms ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.recent-rooms li { display: flex; gap: 6px; }
+.recent-rooms .room-btn { flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; }
+.recent-rooms .room-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-rooms .room-code-text { font-family: ui-monospace, monospace; letter-spacing: .1em; color: var(--muted); font-size: .85rem; flex: none; }
+.recent-rooms .forget { padding: 6px 10px; }

@@ -2,6 +2,7 @@ import {generateRoomCode, normalizeRoomCode} from './game.js';
 import {RpsMatch, cleanName, MAX_ROOM_NAME_LENGTH} from './match.js';
 import {createTransport} from './net.js';
 import {HandStageTube} from './hands-tube.js';
+import {createStore} from './storage.js';
 
 const $ = (id) => document.getElementById(id);
 const HINT_AFTER_MS = 20_000;
@@ -20,16 +21,15 @@ let qrAutoOpened = false;
 const DEFAULT_CREATOR_NAME = 'Ramcharan';
 const DEFAULT_JOINER_NAME = 'Kalicharan';
 const DEFAULT_ROOM_NAME = 'Kali Pahadi Ke Pichhe';
-const NAME_KEY = 'rps-name';
-const loadName = () => { try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } };
-const saveName = (n) => { try { localStorage.setItem(NAME_KEY, n); } catch { /* private mode: fine */ } };
+const store = createStore();
 
 // The name box holds a real value the player erases and retypes, not a hint.
-// Until they edit it, it follows what they are doing: Kalicharan when creating,
-// Ramcharan when joining (so two players never both start as the same name).
+// With no history it follows what they are doing (Ramcharan when creating,
+// Kalicharan when joining, so two players never both start as the same name).
+// Once they have typed a name before, that name is prefilled instead.
 let nameEdited = false;
-const saved = loadName();
-if (saved) { $('name-input').value = saved; nameEdited = true; }
+const [lastName] = store.names();
+if (lastName) { $('name-input').value = lastName; nameEdited = true; }
 
 function syncDefaultName() {
   if (nameEdited) return;
@@ -38,6 +38,54 @@ function syncDefaultName() {
 }
 $('name-input').addEventListener('input', () => { nameEdited = true; });
 $('code-input').addEventListener('input', syncDefaultName);
+
+// --- Remembered names and rooms ------------------------------------------------
+function renderRecents() {
+  const names = store.names();
+  const chips = $('recent-names');
+  chips.replaceChildren(...names.map((name) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = name;
+    b.addEventListener('click', () => { $('name-input').value = name; nameEdited = true; });
+    return b;
+  }));
+  chips.hidden = names.length === 0;
+
+  const rooms = store.rooms();
+  $('recent-rooms').hidden = rooms.length === 0 || !$('invite-note').hidden;
+  $('recent-rooms-list').replaceChildren(...rooms.map((room) => {
+    const li = document.createElement('li');
+
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'room-btn';
+    const label = document.createElement('span');
+    label.className = 'room-label';
+    label.textContent = room.name ?? 'Room';
+    const code = document.createElement('span');
+    code.className = 'room-code-text';
+    code.textContent = room.code;
+    go.append(label, code);
+    go.title = `Rejoin as ${room.myName || 'a new name'}`;
+    go.addEventListener('click', () => enterRoom(room.code, {
+      creator: room.role === 'creator',
+      name: nameEdited ? null : room.myName || null, // a name typed this visit wins
+      roomName: room.name,
+    }));
+
+    const forget = document.createElement('button');
+    forget.type = 'button';
+    forget.className = 'forget ghost';
+    forget.textContent = '\u2715';
+    forget.setAttribute('aria-label', `Forget room ${room.code}`);
+    forget.addEventListener('click', () => { store.forgetRoom(room.code); renderRecents(); });
+
+    li.append(go, forget);
+    return li;
+  }));
+}
 
 function inviteLink(code) {
   const url = new URL(location.href);
@@ -52,10 +100,15 @@ function showHomeError(text) {
   $('home-error').hidden = !text;
 }
 
-function enterRoom(code, {creator = false} = {}) {
+// name / roomName override the form (used when rejoining a remembered room).
+function enterRoom(code, {creator = false, name = null, roomName = null} = {}) {
   roomId = code;
-  myName = cleanName($('name-input').value, creator ? DEFAULT_CREATOR_NAME : DEFAULT_JOINER_NAME);
-  if (nameEdited && $('name-input').value.trim()) saveName(myName); // never save the defaults
+  myName = cleanName(name ?? $('name-input').value, creator ? DEFAULT_CREATOR_NAME : DEFAULT_JOINER_NAME);
+  const hostedRoomName = creator
+    ? cleanName(roomName ?? $('room-name-input').value, DEFAULT_ROOM_NAME, MAX_ROOM_NAME_LENGTH)
+    : '';
+  if (name === null && nameEdited) store.rememberName(myName); // never remember the defaults
+  store.rememberRoom({code, name: hostedRoomName || null, myName, role: creator ? 'creator' : 'joiner'});
   $('label-me').textContent = myName;
   $('label-them').textContent = 'Friend';
   history.replaceState(null, '', inviteLink(code));
@@ -70,7 +123,7 @@ function enterRoom(code, {creator = false} = {}) {
     transport: createTransport(code),
     roomId: code,
     name: myName,
-    roomName: creator ? cleanName($('room-name-input').value, DEFAULT_ROOM_NAME, MAX_ROOM_NAME_LENGTH) : '',
+    roomName: hostedRoomName,
     onChange: (s) => { drive(s); render(s); },
   });
   const s = match.snapshot();
@@ -99,6 +152,7 @@ function leaveRoom() {
   $('screen-game').hidden = true;
   $('screen-home').hidden = false;
   $('hint').hidden = true;
+  renderRecents();
 }
 
 // --- QR code -------------------------------------------------------------------
@@ -206,6 +260,7 @@ const OUTCOME = {win: ['You win! 🎉', 'win'], lose: ['You lose 😬', 'lose'],
 function render(s) {
   const them = s.opponentName ?? 'Friend';
   $('room-title').textContent = s.roomName ?? 'Room';
+  if (s.roomName && roomId) store.updateRoomName(roomId, s.roomName);
   $('label-them').textContent = them;
   if (s.phase !== 'waiting' && qrAutoOpened) { qrAutoOpened = false; setQr(false); }
   const resultVisible = s.phase === 'result' && anim?.done;
@@ -281,3 +336,4 @@ if (fromUrl) {
   syncDefaultName();
   $('name-input').focus();
 }
+renderRecents();

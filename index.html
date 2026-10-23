@@ -17,6 +17,7 @@
         <span class="muted small">Your name</span>
         <input id="name-input" maxlength="16" value="Ramcharan" placeholder="Your name" autocomplete="nickname" spellcheck="false">
       </label>
+      <div id="recent-names" class="chips" hidden aria-label="Recent names"></div>
       <div id="create-block" class="create-block">
         <label class="field">
           <span class="muted small">Room name</span>
@@ -30,6 +31,10 @@
                autocapitalize="characters" aria-label="Room code">
         <button type="submit">Join</button>
       </form>
+      <div id="recent-rooms" class="recent-rooms" hidden>
+        <span class="muted small">Recent rooms</span>
+        <ul id="recent-rooms-list"></ul>
+      </div>
       <p id="home-error" class="error" role="alert" hidden></p>
     </section>
 
