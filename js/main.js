@@ -24,12 +24,10 @@ const DEFAULT_ROOM_NAME = 'Kali Pahadi Ke Pichhe';
 const store = createStore();
 
 // The name box holds a real value the player erases and retypes, not a hint.
-// With no history it follows what they are doing (Ramcharan when creating,
-// Kalicharan when joining, so two players never both start as the same name).
-// Once they have typed a name before, that name is prefilled instead.
+// It is always prefilled by role: Ramcharan when creating, Kalicharan when joining
+// (so two players never both start as the same name). Names used before are kept
+// and offered as chips under the box; tapping one (or typing) overrides the default.
 let nameEdited = false;
-const [lastName] = store.names();
-if (lastName) { $('name-input').value = lastName; nameEdited = true; }
 
 function syncDefaultName() {
   if (nameEdited) return;
@@ -37,6 +35,7 @@ function syncDefaultName() {
   $('name-input').value = joining ? DEFAULT_JOINER_NAME : DEFAULT_CREATOR_NAME;
 }
 $('name-input').addEventListener('input', () => { nameEdited = true; });
+syncDefaultName();
 $('code-input').addEventListener('input', syncDefaultName);
 
 // --- Remembered names and rooms ------------------------------------------------
