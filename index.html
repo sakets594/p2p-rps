@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P2P Rock Paper Scissors</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <section id="screen-home">
+      <h1>Rock · Paper · Scissors</h1>
+      <p class="muted">Play a friend directly, browser to browser. No server, no sign-up.</p>
+      <button id="btn-create" class="primary">Create game</button>
+      <div class="divider"><span>or join a friend</span></div>
+      <form id="join-form" autocomplete="off">
+        <input id="code-input" placeholder="Room code" maxlength="9" spellcheck="false"
+               autocapitalize="characters" aria-label="Room code">
+        <button type="submit">Join</button>
+      </form>
+      <p id="home-error" class="error" role="alert" hidden></p>
+    </section>
+
+    <section id="screen-game" hidden>
+      <header class="bar">
+        <div>
+          <span class="muted small">Room</span>
+          <strong id="room-code" class="code"></strong>
+        </div>
+        <div class="actions">
+          <button id="btn-copy" class="small">Copy invite link</button>
+          <button id="btn-leave" class="small ghost">Leave</button>
+        </div>
+      </header>
+
+      <div class="score" aria-live="polite">
+        <div><span class="n" id="score-win">0</span><span class="muted small">You</span></div>
+        <div><span class="n" id="score-draw">0</span><span class="muted small">Draws</span></div>
+        <div><span class="n" id="score-lose">0</span><span class="muted small">Friend</span></div>
+      </div>
+
+      <p class="muted small center" id="round-label"></p>
+      <h2 id="status" class="center" aria-live="polite"></h2>
+      <p id="hint" class="muted small center" hidden></p>
+
+      <div id="reveal" class="reveal" hidden>
+        <div><span class="big" id="reveal-me"></span><span class="muted small">You</span></div>
+        <span class="vs">vs</span>
+        <div><span class="big" id="reveal-them"></span><span class="muted small">Friend</span></div>
+      </div>
+
+      <div id="moves" class="moves">
+        <button class="move" data-move="rock"><span class="emoji">✊</span>Rock</button>
+        <button class="move" data-move="paper"><span class="emoji">✋</span>Paper</button>
+        <button class="move" data-move="scissors"><span class="emoji">✌️</span>Scissors</button>
+      </div>
+
+      <button id="btn-next" class="primary" hidden>Next round</button>
+    </section>
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
