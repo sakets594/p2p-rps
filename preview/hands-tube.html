@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tube hands preview</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/hands-tube.css">
+  <style>
+    body { padding: 16px; }
+    .panel { max-width: 640px; margin: 0 auto 16px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    #stage { border-radius: 12px; background: radial-gradient(circle at 50% 30%, var(--bg), var(--card)); }
+    label { font-size: .9rem; } select { font: inherit; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h2 style="min-height:0">2D tube hands</h2>
+    <div id="stage"></div>
+    <p id="caption" class="muted center small">ready</p>
+    <div class="row">
+      <label>You <select id="mine"><option>rock</option><option>paper</option><option selected>scissors</option></select></label>
+      <label>Friend <select id="theirs"><option selected>rock</option><option>paper</option><option>scissors</option></select></label>
+      <label>Network delay <select id="delay"><option value="0">none</option><option value="1500">1.5 s</option><option value="3500">3.5 s</option></select></label>
+    </div>
+    <div class="row">
+      <button id="play" class="primary">Play</button>
+      <button id="reset">Reset</button>
+      <label><input type="checkbox" id="slow"> Slow motion (×3)</label>
+    </div>
+    <div class="row">
+      <span class="muted small">Pose both hands:</span>
+      <button class="pose" data-pose="open">open</button>
+      <button class="pose" data-pose="rock">rock</button>
+      <button class="pose" data-pose="paper">paper</button>
+      <button class="pose" data-pose="scissors">scissors</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import {HandStageTube} from '../js/hands-tube.js';
+    import {resolve} from '../js/game.js';
+
+    const $ = (id) => document.getElementById(id);
+    const stage = new HandStageTube($('stage'));
+    window.stage = stage;
+    let running = false;
+
+    $('play').onclick = async () => {
+      if (running) return;
+      running = true;
+      stage.reset();
+      await new Promise((r) => setTimeout(r, 150));
+      const mine = $('mine').value, theirs = $('theirs').value, outcome = resolve(mine, theirs);
+      $('caption').textContent = 'you lock in…';
+      await stage.lockIn('me');
+      $('caption').textContent = 'friend locks in…';
+      await stage.lockIn('them');
+      $('caption').textContent = 'pumping while the network exchanges reveals…';
+      stage.startShake();
+      await new Promise((r) => setTimeout(r, +$('delay').value * stage.slow));
+      await stage.reveal({mine, theirs, outcome});
+      $('caption').textContent = `${mine} vs ${theirs}: you ${outcome}`;
+      running = false;
+    };
+    $('reset').onclick = () => { stage.reset(); $('caption').textContent = 'idle'; running = false; };
+    $('slow').onchange = (e) => stage.setSlow(e.target.checked ? 3 : 1);
+    document.querySelectorAll('.pose').forEach((b) => b.onclick = () => {
+      for (const h of Object.values(stage.hands)) { h.appearTarget = 1; h.setPose(b.dataset.pose); }
+    });
+  </script>
+</body>
+</html>

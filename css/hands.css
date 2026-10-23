@@ -1,0 +1,88 @@
+/* Animated hands. Poses are CSS transforms on the SVG parts, so changing
+   data-pose animates between rock / paper / scissors / open for free. */
+
+.hand-stage {
+  --speed: 1;                       /* >1 = slow motion (preview/debug) */
+  --skin: #f1c7a0; --outline: #7a4a2a;
+  --me: #4f46e5; --them: #e11d74;
+  display: flex; justify-content: center; align-items: flex-end; gap: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  .hand-stage { --skin: #e0b088; --outline: #a06a40; }
+}
+
+.hand-wrap {
+  width: min(42vw, 190px);
+  transition: opacity calc(.3s * var(--speed)), transform calc(.45s * var(--speed)) cubic-bezier(.3, 1.6, .5, 1), filter calc(.4s * var(--speed));
+}
+.hand-wrap.me   { --cuff: var(--me);   transform: rotate(9deg); }
+.hand-wrap.them { --cuff: var(--them); transform: rotate(-9deg); }
+.hand-wrap.them svg { transform: scaleX(-1); }
+
+/* lifecycle */
+.hand-wrap[data-state="hidden"] { opacity: 0; transform: translateY(40px) scale(.85); }
+.hand-wrap.me[data-state="hidden"]   { transform: translateY(40px) rotate(9deg) scale(.85); }
+.hand-wrap.them[data-state="hidden"] { transform: translateY(40px) rotate(-9deg) scale(.85); }
+
+.pump { display: block; }
+.hand-wrap[data-shaking="true"] .pump {
+  animation: pump calc(var(--pump-ms, 450) * 1ms * var(--speed)) ease-in-out infinite;
+}
+@keyframes pump {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-26px); }
+}
+
+/* result emphasis */
+.hand-wrap[data-result="win"]  { filter: drop-shadow(0 0 14px #22c55e); transform: scale(1.12); }
+.hand-wrap.me[data-result="win"]   { transform: rotate(9deg) scale(1.12); }
+.hand-wrap.them[data-result="win"] { transform: rotate(-9deg) scale(1.12); }
+.hand-wrap[data-result="lose"] { opacity: .55; filter: grayscale(.6); }
+
+/* SVG parts */
+.hand svg { display: block; width: 100%; height: auto; overflow: visible; }
+.hand .skin  { fill: var(--skin); }                 /* outline comes from the SVG filter */
+.hand .outline-flood { flood-color: var(--outline); }
+.hand .cuff  { fill: var(--cuff); stroke: var(--outline); stroke-width: 3; stroke-linejoin: round; }
+
+/* faint finger creases, only visible when fingers are curled */
+.hand .creases path { fill: none; stroke: var(--outline); stroke-width: 2.4; stroke-linecap: round; opacity: 0; transition: opacity calc(.3s * var(--speed)); }
+.hand[data-pose="rock"] .creases path { opacity: .55; }
+.hand[data-pose="scissors"] .creases path:nth-child(3) { opacity: .55; }
+
+.hand .f, .hand .thumb {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition: transform calc(.4s * var(--speed)) cubic-bezier(.3, 1.4, .5, 1);
+  transform: rotate(var(--r, 0deg)) scaleY(var(--s, 1));
+}
+
+/* paper / open: everything extended, thumb out */
+.hand[data-pose="paper"] .f, .hand[data-pose="open"] .f { --s: 1; --r: 0deg; }
+.hand[data-pose="paper"] .f.i, .hand[data-pose="open"] .f.i { --r: -3deg; }
+.hand[data-pose="paper"] .f.p, .hand[data-pose="open"] .f.p { --r: 5deg; }
+
+/* rock: fingers curled, thumb across */
+.hand[data-pose="rock"] .f { --s: .5; --r: 0deg; }
+.hand[data-pose="rock"] .thumb { --r: 58deg; }
+
+/* scissors: index + middle in a V, others curled */
+.hand[data-pose="scissors"] .f.i { --s: 1; --r: -11deg; }
+.hand[data-pose="scissors"] .f.m { --s: 1; --r: 11deg; }
+.hand[data-pose="scissors"] .f.r,
+.hand[data-pose="scissors"] .f.p { --s: .5; }
+.hand[data-pose="scissors"] .thumb { --r: 58deg; }
+
+.hand .thumb { --r: -46deg; }
+
+/* The thumb sits behind the palm when open and in front when folded across it.
+   Two copies cross-fade halfway through the swing. */
+.hand .thumb.front { opacity: 0; transition: transform calc(.4s * var(--speed)) cubic-bezier(.3, 1.4, .5, 1), opacity 0s calc(.14s * var(--speed)); }
+.hand .thumb.back  { opacity: 1; transition: transform calc(.4s * var(--speed)) cubic-bezier(.3, 1.4, .5, 1), opacity 0s calc(.14s * var(--speed)); }
+.hand[data-pose="rock"] .thumb.front, .hand[data-pose="scissors"] .thumb.front { opacity: 1; }
+.hand[data-pose="rock"] .thumb.back,  .hand[data-pose="scissors"] .thumb.back  { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-wrap[data-shaking="true"] .pump { animation: none; }
+  .hand-wrap, .hand .f, .hand .thumb { transition-duration: .01s; }
+}

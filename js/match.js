@@ -8,6 +8,16 @@
 
 import {MOVES, makeCommit, resolve, verifyReveal} from './game.js';
 
+export const MAX_NAME_LENGTH = 16;
+export const MAX_ROOM_NAME_LENGTH = 24;
+
+/** Names come from the network and are shown in the UI: strip control chars, trim, cap. */
+export function cleanName(raw, fallback = '', max = MAX_NAME_LENGTH) {
+  if (typeof raw !== 'string') return fallback;
+  const name = raw.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, '').trim();
+  return Array.from(name).slice(0, max).join('') || fallback;
+}
+
 const HEX64 = /^[0-9a-f]{64}$/;
 const HEX32 = /^[0-9a-f]{32}$/;
 
@@ -22,6 +32,10 @@ const HEX32 = /^[0-9a-f]{32}$/;
 export class RpsMatch {
   #transport;
   #roomId;
+  #name;
+  #roomName;
+  #roomNames = new Map(); // peerId -> room name that peer announced (the creator's)
+  #names = new Map(); // peerId -> display name (kept even if a hello beats the join event)
   #onChange;
   #peers = new Set();
   #opponentId = null;
@@ -32,9 +46,11 @@ export class RpsMatch {
   #theirReveals = new Map(); // round -> {move, nonce}
   #verifying = false;
 
-  constructor({transport, roomId, onChange = () => {}}) {
+  constructor({transport, roomId, name = 'Player', roomName = '', onChange = () => {}}) {
     this.#transport = transport;
     this.#roomId = roomId;
+    this.#name = cleanName(name, 'Player');
+    this.#roomName = cleanName(roomName, '', MAX_ROOM_NAME_LENGTH);
     this.#onChange = onChange;
     this.#s = this.#fresh();
     transport.onMessage = (msg, peerId) => this.#onMessage(msg, peerId);
@@ -43,7 +59,14 @@ export class RpsMatch {
   }
 
   snapshot() {
-    return {...this.#s, scores: {...this.#s.scores}};
+    return {
+      ...this.#s,
+      scores: {...this.#s.scores},
+      opponentName: this.#names.get(this.#opponentId) ?? null,
+      roomName: this.#roomName || this.#roomNames.get(this.#opponentId) || null,
+      theirCommitted: this.#theirCommits.has(this.#s.round),
+      session: this.#epoch, // changes whenever the match restarts (new opponent)
+    };
   }
 
   async pick(move) {
@@ -113,10 +136,13 @@ export class RpsMatch {
     this.#opponentId = peerId;
     this.#reset();
     this.#emit();
+    this.#transport.send({t: 'hello', name: this.#name, room: this.#roomName}, peerId);
   }
 
   #onPeerLeave(peerId) {
     this.#peers.delete(peerId);
+    this.#names.delete(peerId);
+    this.#roomNames.delete(peerId);
     if (peerId !== this.#opponentId) return;
     this.#opponentId = this.#peers.values().next().value ?? null;
     this.#reset();
@@ -125,7 +151,17 @@ export class RpsMatch {
 
   // Everything below is remote input: validate before trusting.
   #onMessage(msg, peerId) {
-    if (peerId !== this.#opponentId || !msg || typeof msg !== 'object') return;
+    if (!msg || typeof msg !== 'object') return;
+    if (msg.t === 'hello') {
+      const name = cleanName(msg.name);
+      if (!name) return;
+      this.#names.set(peerId, name);
+      const room = cleanName(msg.room, '', MAX_ROOM_NAME_LENGTH);
+      if (room) this.#roomNames.set(peerId, room);
+      if (peerId === this.#opponentId) this.#emit();
+      return;
+    }
+    if (peerId !== this.#opponentId) return;
     const {round} = msg;
     // The opponent can be at most one round ahead of us, never behind.
     if (!Number.isInteger(round) || round < this.#s.round || round > this.#s.round + 1) return;
@@ -133,6 +169,7 @@ export class RpsMatch {
     if (msg.t === 'commit') {
       if (!HEX64.test(msg.hash) || this.#theirCommits.has(round)) return;
       this.#theirCommits.set(round, msg.hash);
+      if (round === this.#s.round) this.#emit(); // lets the UI show "friend locked in"
     } else if (msg.t === 'reveal') {
       if (!MOVES.includes(msg.move) || !HEX32.test(msg.nonce)) return;
       if (!this.#theirCommits.has(round) || this.#theirReveals.has(round)) return;

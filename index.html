@@ -5,14 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>P2P Rock Paper Scissors</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/hands-tube.css">
 </head>
 <body>
   <main>
     <section id="screen-home">
       <h1>Rock · Paper · Scissors</h1>
       <p class="muted">Play a friend directly, browser to browser. No server, no sign-up.</p>
-      <button id="btn-create" class="primary">Create game</button>
-      <div class="divider"><span>or join a friend</span></div>
+      <p id="invite-note" class="invite-note" hidden></p>
+      <label class="field">
+        <span class="muted small">Your name</span>
+        <input id="name-input" maxlength="16" placeholder="Kalicharan / Ramcharan" autocomplete="nickname" spellcheck="false">
+      </label>
+      <div id="create-block" class="create-block">
+        <label class="field">
+          <span class="muted small">Room name (optional)</span>
+          <input id="room-name-input" maxlength="24" placeholder="Kali Pahadi Ke Pichhe" spellcheck="false">
+        </label>
+        <button id="btn-create" class="primary">Create game</button>
+        <div class="divider"><span>or join a friend</span></div>
+      </div>
       <form id="join-form" autocomplete="off">
         <input id="code-input" placeholder="Room code" maxlength="9" spellcheck="false"
                autocapitalize="characters" aria-label="Room code">
@@ -24,30 +36,32 @@
     <section id="screen-game" hidden>
       <header class="bar">
         <div>
-          <span class="muted small">Room</span>
+          <span class="muted small room-title" id="room-title">Room</span>
           <strong id="room-code" class="code"></strong>
         </div>
         <div class="actions">
+          <button id="btn-qr" class="small" aria-expanded="false" aria-controls="qr-panel">QR code</button>
           <button id="btn-copy" class="small">Copy invite link</button>
           <button id="btn-leave" class="small ghost">Leave</button>
         </div>
       </header>
 
+      <div id="qr-panel" class="qr-panel" hidden>
+        <div id="qr" class="qr" role="img" aria-label="QR code for the invite link"></div>
+        <p class="muted small center">Scan with a phone camera to join this game.</p>
+      </div>
+
       <div class="score" aria-live="polite">
-        <div><span class="n" id="score-win">0</span><span class="muted small">You</span></div>
+        <div><span class="n" id="score-win">0</span><span class="muted small who me" id="label-me">You</span></div>
         <div><span class="n" id="score-draw">0</span><span class="muted small">Draws</span></div>
-        <div><span class="n" id="score-lose">0</span><span class="muted small">Friend</span></div>
+        <div><span class="n" id="score-lose">0</span><span class="muted small who them" id="label-them">Friend</span></div>
       </div>
 
       <p class="muted small center" id="round-label"></p>
       <h2 id="status" class="center" aria-live="polite"></h2>
       <p id="hint" class="muted small center" hidden></p>
 
-      <div id="reveal" class="reveal" hidden>
-        <div><span class="big" id="reveal-me"></span><span class="muted small">You</span></div>
-        <span class="vs">vs</span>
-        <div><span class="big" id="reveal-them"></span><span class="muted small">Friend</span></div>
-      </div>
+      <div id="hands" class="hands"></div>
 
       <div id="moves" class="moves">
         <button class="move" data-move="rock"><span class="emoji">✊</span>Rock</button>

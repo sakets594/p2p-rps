@@ -1,0 +1,14 @@
+.tube-stage {
+  --skin: #f1c7a0; --outline: #7a4a2a; --me: #4f46e5; --them: #e11d74;
+  width: 100%; height: auto; max-height: 420px; display: block; overflow: visible;
+}
+@media (prefers-color-scheme: dark) { .tube-stage { --skin: #e8b890; --outline: #a06a40; } }
+.tube-hand .line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.tube-hand .line.o { stroke: var(--outline); }
+.tube-hand .line.s { stroke: var(--skin); }
+.tube-hand rect.o { fill: var(--outline); stroke: var(--outline); stroke-linejoin: round; }
+.tube-hand rect.s { fill: var(--skin); }
+.tube-hand.me   .cuff { fill: var(--me);   stroke: var(--outline); stroke-width: 3; }
+.tube-hand.them .cuff { fill: var(--them); stroke: var(--outline); stroke-width: 3; }
+.tube-hand.win  { filter: drop-shadow(0 0 10px rgba(255, 226, 176, .9)); }
+.tube-hand.lose { filter: grayscale(.6); }
