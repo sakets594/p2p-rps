@@ -12,7 +12,7 @@ Frontend-only multiplayer game. No game server, no backend, no cost.
 ## Features
 
 - Animated hands (`js/hands-tube.js`): open, fist, three pumps while the network exchanges reveals, then both open at once.
-- Player names and an optional room name (defaults: Kalicharan, Ramcharan, Kali Pahadi Ke Pichhe), shared over the same P2P handshake.
+- Player names and an optional room name (defaults: Ramcharan when creating, Kalicharan when joining, room "Kali Pahadi Ke Pichhe"), shared over the same P2P handshake.
 - Invite by link, code, or QR (QR library is loaded from a CDN only when the QR is shown).
 - `js/hands3d.js` + `preview/hands3d.html`: an unfinished 3D-hands experiment (Three.js, WebXR generic hand model). Not used by the game yet.
 - Animation previews: `preview/hands-tube.html`, `preview/hands3d.html`.

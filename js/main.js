@@ -17,8 +17,8 @@ let shownScores = {win: 0, lose: 0, draw: 0};
 let myName = 'Player';
 let qrAutoOpened = false;
 
-const DEFAULT_CREATOR_NAME = 'Kalicharan';
-const DEFAULT_JOINER_NAME = 'Ramcharan';
+const DEFAULT_CREATOR_NAME = 'Ramcharan';
+const DEFAULT_JOINER_NAME = 'Kalicharan';
 const DEFAULT_ROOM_NAME = 'Kali Pahadi Ke Pichhe';
 const NAME_KEY = 'rps-name';
 const loadName = () => { try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } };
