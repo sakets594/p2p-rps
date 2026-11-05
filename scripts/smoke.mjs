@@ -1,5 +1,6 @@
 // Runs test/browser/smoke.html in headless Chrome and prints the result.
 //   npm run smoke            (set CHROME=/path/to/chrome if it is not found)
+//   SMOKE_BASE=https://user.github.io/repo/ npm run smoke    tests a deployed site instead of the local files
 // No dependencies: a tiny static server plus `chrome --headless --dump-dom`.
 
 import {createServer} from 'node:http';
@@ -30,7 +31,9 @@ const server = createServer(async (req, res) => {
   res.end(body);
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
-const url = `http://127.0.0.1:${server.address().port}/test/browser/smoke.html`;
+const base = process.env.SMOKE_BASE ? process.env.SMOKE_BASE.replace(/\/?$/, '/') : `http://127.0.0.1:${server.address().port}/`;
+const url = `${base}test/browser/smoke.html?nocache=${Date.now()}`;
+console.log(`testing ${base}`);
 
 // Real time (not --virtual-time-budget: that does not tick requestAnimationFrame, which the game's tweens need).
 // Chrome is driven over its DevTools port; the page writes its report into #smoke-result when done.
@@ -52,8 +55,19 @@ let id = 0;
 const pendingCalls = new Map();
 ws.addEventListener('message', (e) => { const m = JSON.parse(e.data); pendingCalls.get(m.id)?.(m); pendingCalls.delete(m.id); });
 const cdp = (method, params = {}) => new Promise((r) => { const n = ++id; pendingCalls.set(n, r); ws.send(JSON.stringify({id: n, method, params})); });
-const read = async (expr) => (await cdp('Runtime.evaluate', {expression: expr, returnByValue: true})).result?.result?.value;
+const read = async (expr) => (await cdp('Runtime.evaluate', {expression: expr, returnByValue: true, awaitPromise: true})).result?.result?.value;
 
+await cdp('Runtime.enable');
+const pageErrors = [];
+ws.addEventListener('message', (e) => { const m = JSON.parse(e.data); if (m.method === 'Runtime.exceptionThrown') pageErrors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text); });
+await cdp('Page.navigate', {url: `${base}?nocache=${Date.now()}`});
+await new Promise((r) => setTimeout(r, 4000));
+const mainText = await read(`document.body.innerText.slice(0, 200)`);
+const mainOk = pageErrors.length === 0 && /room/i.test(mainText ?? '');
+console.log(`${mainOk ? 'PASS' : 'FAIL'}  main page loads and shows the room screen${pageErrors.length ? `\n      ${pageErrors.join(' | ')}` : ''}`);
+const registry = await read(`fetch('js/games.js?nocache=${Date.now()}', {cache: 'reload'}).then((r) => r.text())`);
+const regOk = /id:\s*'cup-pong'/.test(registry ?? '') && /id:\s*'rps'/.test(registry ?? '');
+console.log(`${regOk ? 'PASS' : 'FAIL'}  the served game list has rps and cup-pong`);
 await cdp('Page.navigate', {url});
 let json = null;
 for (const t0 = Date.now(); Date.now() - t0 < 150_000 && !json;) {
@@ -68,5 +82,6 @@ server.close();
 if (!json) { console.error(`Smoke page did not finish in time. Last status:\n${progress}`); process.exit(1); }
 const report = JSON.parse(json);
 for (const r of report.results) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.name}  (${r.ms} ms)${r.error ? `\n      ${r.error}` : ''}`);
-console.log(report.ok ? `\nsmoke OK (${report.passed} checks)` : `\nsmoke FAILED (${report.failed} of ${report.results.length})`);
-process.exit(report.ok ? 0 : 1);
+const allOk = report.ok && mainOk && regOk;
+console.log(allOk ? `\nsmoke OK (${report.passed} checks)` : `\nsmoke FAILED (${report.failed} of ${report.results.length} browser checks${mainOk && regOk ? '' : ', and a page check above'})`);
+process.exit(allOk ? 0 : 1);

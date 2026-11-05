@@ -105,6 +105,8 @@ npm run smoke        # headless Chrome, about 30 s; needs Google Chrome or Chrom
 The browser smoke test (`test/browser/smoke.html`, run by `scripts/smoke.mjs`) mounts every ready game from the
 registry twice over the in-memory network and plays through the real UI: Rock Paper Scissors by clicking two
 rounds, Cup Pong through the intro and coin flip and a real swipe. It also fails on any uncaught page error.
+After every deploy, run it against the live site: `SMOKE_BASE=https://<user>.github.io/<repo>/ npm run smoke` (it also checks the main page loads
+and that the served game list has both games).
 You can open the same page by hand at `/test/browser/smoke.html` after `npm run serve`.
 The real network path is checked by hand: two tabs locally, then two devices on different networks.
 
