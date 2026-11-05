@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>PROTOTYPE - Cup Pong flick feel</title>
+<!--
+  PROTOTYPE - throwaway. Question: does a speed-based flick feel right, and which
+  constants make it feel right? Run `npm run serve`, open this page on a phone via
+  http://<your-LAN-ip>:8000/preview/cup-pong-proto.html and on a desktop.
+  State is in memory only. Sliders edit the physics constants live; "Copy settings"
+  prints the tuned values. The canvas is a cheap perspective projection, not the
+  final Three.js view.
+-->
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #14181d; color: #e8eef5; font: 14px system-ui, sans-serif; }
+  #banner { background: #7a3b00; padding: 4px 10px; font-size: 12px; text-align: center; }
+  #wrap { max-width: 460px; margin: 0 auto; }
+  canvas { display: block; width: 100%; height: 62vh; touch-action: none; background: #1d2a33; }
+  #stage { position: relative; }
+  #calibTop { position: absolute; bottom: 8px; right: 8px; background: #ffd24a; color: #222; border: none; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  #side { height: 170px; background: #101820; border-top: 1px solid #2a3642; }
+  #hud { font: 12px ui-monospace, monospace; padding: 6px 10px; min-height: 5.2em; white-space: pre-wrap; background: #0e1216; }
+  #bar { display: flex; gap: 6px; padding: 6px 10px; flex-wrap: wrap; }
+  button, select { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid #3a4652; background: #232d37; color: inherit; }
+  details { padding: 6px 10px; }
+  .row { display: grid; grid-template-columns: 110px 1fr 54px; gap: 6px; align-items: center; margin: 3px 0; }
+  .row input { width: 100%; }
+  .row output { font: 12px ui-monospace, monospace; text-align: right; }
+  #cfg { width: 100%; height: 5em; font: 11px ui-monospace, monospace; background: #0e1216; color: #cfe; border: 1px solid #3a4652; }
+</style>
+</head>
+<body>
+<div id="banner">PROTOTYPE build 10 - flick UP starting on the ball</div>
+<div id="wrap">
+  <div id="stage"><canvas id="c"></canvas><button id="calibTop">Calibrate (10)</button></div>
+  <canvas id="side"></canvas>
+  <div id="hud">flick the ball upward</div>
+  <div id="bar">
+    <select id="viewSel"><option value="side">side view</option><option value="top">top view</option><option value="off">view off</option></select>
+    <select id="cupsSel"><option>10</option><option>6</option><option>3</option></select>
+    <button id="reset">Reset cups</button>
+    <button id="replay">Replay last</button>
+    <button id="copy">Copy settings</button>
+    <button id="calibBtn">Calibrate (10 throws)</button>
+    <button id="resetHelper">Reset helper</button>
+    <label style="align-self:center"><input type="checkbox" id="slow"> slow-mo</label>
+  </div>
+  <details open><summary>Flick input</summary><div id="inputSliders"></div></details>
+  <details open><summary>Forgiveness assist <label><input type="checkbox" id="assistOn" checked> on</label></summary><div id="assistSliders"></div></details>
+  <details open><summary>Camera view</summary><div id="camSliders"></div></details>
+  <details><summary>Physics + sizes</summary><div id="physSliders"></div></details>
+  <details open><summary>Attempt log (last 10)</summary><div id="attempts" style="font:11px ui-monospace,monospace;overflow-x:auto"></div><div id="profileNote" style="font:12px system-ui;padding:4px 0;color:#9fd"></div></details>
+  <details><summary>Settings JSON</summary><textarea id="cfg" readonly></textarea></details>
+</div>
+
+<script type="module">
+import {DEFAULTS, layoutCups, simulate, launch} from '../js/games/cup-pong/physics.js';
+import {shapeThrow, ASSIST_DEFAULTS} from '../js/games/cup-pong/aim-assist.js';
+import {calibrate, MIN_SAMPLES} from '../js/games/cup-pong/calibrate.js';
+
+// ---- tunables --------------------------------------------------------------
+const P = {...DEFAULTS};
+const A = {...ASSIST_DEFAULTS};
+const assistDefs = [
+  ['deadZoneQ', 'aim dead zone', 0, 25, 1],
+  ['lateralGain', 'sideways gain', 0.2, 1, 0.05],
+  ['lateralCurve', 'sideways curve', 1, 3, 0.1],
+  ['xMargin', 'stay inside edge', 0, 0.3, 0.01],
+  ['zOvershoot', 'max overshoot', 0, 1.2, 0.05],
+  ['formationPull', 'pull to formation', 0, 1, 0.05],
+  ['lateralPull', 'pull sideways share', 0, 1, 0.05],
+  ['captureRadius', 'pull reach (m)', 0.2, 2, 0.05],
+  ['magnet', 'cup magnet', 0, 1, 0.05],
+  ['magnetRadius', 'magnet radius', 0.05, 0.5, 0.01],
+  ['magnetMax', 'magnet, last cups', 0, 1, 0.05],
+];
+const CAM = {x: 0, y: 1.0, z: -0.5, pitch: 0.72, f: 1.5, hz: 0.45};
+const camDefs = [
+  ['y', 'height (m)', 0.3, 2.5, 0.05],
+  ['z', 'distance back (m)', -1.6, 0.4, 0.05],
+  ['pitch', 'tilt down (rad)', 0, 1.4, 0.02],
+  ['f', 'zoom', 0.6, 3, 0.05],
+  ['hz', 'frame up/down', 0.1, 0.9, 0.01],
+];
+const I = {minSpeed: 1.2, maxSpeed: 5.0, curve: 1.0, windowMs: 90, trimMs: 20, hitMult: 2.5, angleRangeDeg: 45, angleOffsetDeg: 0};
+const inputDefs = [
+  ['minSpeed', 'min speed (sh/s)', 0.2, 4, 0.05],
+  ['maxSpeed', 'max speed (sh/s)', 2, 12, 0.1],
+  ['curve', 'power curve', 0.4, 2.5, 0.05],
+  ['windowMs', 'window (ms)', 30, 200, 5],
+  ['trimMs', 'ignore last (ms)', 0, 60, 5],
+  ['hitMult', 'ball grab radius x', 1, 5, 0.1],
+  ['angleRangeDeg', 'full-aim flick angle (deg)', 20, 90, 1],
+  ['angleOffsetDeg', 'sideways lean fix (deg)', -20, 20, 0.5],
+];
+const physDefs = [
+  ['aimSlope', 'aim slope', 0.1, 0.9, 0.01],
+  ['minRange', 'min range (m)', 0.3, 1.5, 0.05],
+  ['maxRange', 'max range (m)', 1.2, 4, 0.05],
+  ['g', 'gravity', 3, 15, 0.1],
+  ['ballR', 'ball radius', 0.01, 0.05, 0.001],
+  ['cupRimR', 'cup rim radius', 0.03, 0.1, 0.001],
+  ['cupH', 'cup height', 0.06, 0.2, 0.005],
+  ['zFront', 'cup distance', 0.8, 1.6, 0.05],
+  ['tableRestitution', 'table bounce', 0, 0.95, 0.05],
+  ['tableFriction', 'table grip', 0.4, 1, 0.05],
+  ['maxBounces', 'max bounces', 0, 8, 1],
+  ['rimRestitution', 'rim bounce', 0, 1, 0.05],
+];
+function sliders(host, defs, obj, onChange) {
+  host.innerHTML = '';
+  for (const [key, label, min, max, step] of defs) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}"><output></output>`;
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.value = obj[key]; out.textContent = obj[key];
+    inp.oninput = () => { obj[key] = +inp.value; out.textContent = inp.value; onChange(); };
+    host.appendChild(row);
+  }
+}
+
+// ---- state -----------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const canvas = $('c'), ctx = canvas.getContext('2d');
+let cupCount = 10, cups = layoutCups(cupCount, P);
+let lastSim = null, throwCount = 0, turnLog = [], anim = null, lastThrow = null, hudText = 'flick the ball upward', toast = '';
+let W = 0, H = 0, dpr = 1;
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const r = canvas.getBoundingClientRect();
+  W = r.width; H = r.height;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+}
+const sideCv = $('side'), sctx = sideCv.getContext('2d');
+let SW = 0, SH = 0;
+function resize2() {
+  const r = sideCv.getBoundingClientRect(); SW = r.width; SH = r.height;
+  sideCv.width = SW * dpr; sideCv.height = SH * dpr;
+  sideCv.style.display = $('viewSel').value === 'off' ? 'none' : 'block';
+}
+$('viewSel').onchange = resize2;
+window.addEventListener('resize', () => { resize(); resize2(); }); resize(); resize2();
+
+function newGame() {
+  cups = layoutCups(cupCount, P); lastSim = null; throwCount = 0; turnLog = []; anim = null; hudText = 'flick the ball upward'; toast = '';
+}
+$('cupsSel').onchange = (e) => { cupCount = +e.target.value; newGame(); };
+$('reset').onclick = newGame;
+$('replay').onclick = () => { if (lastThrow) startThrow(lastThrow.angleQ, lastThrow.powerQ, true); };
+function dumpCfg() {
+  $('cfg').value = JSON.stringify({camera: CAM, input: I, assist: A, physics: Object.fromEntries(physDefs.map(([k]) => [k, P[k]]))}, null, 1);
+}
+$('copy').onclick = () => { dumpCfg(); navigator.clipboard?.writeText($('cfg').value).catch(() => {}); $('copy').textContent = 'Copied'; setTimeout(() => $('copy').textContent = 'Copy settings', 900); };
+let buildAll = () => {};
+buildAll = () => {
+  sliders($('inputSliders'), inputDefs, I, dumpCfg);
+  sliders($('camSliders'), camDefs, CAM, dumpCfg);
+  sliders($('assistSliders'), assistDefs, A, dumpCfg);
+  sliders($('physSliders'), physDefs, P, () => { P.tableZ1 = P.zFront + 1.2; if (!anim) cups = relayoutKeepingDead(); dumpCfg(); });
+};
+buildAll(); dumpCfg();
+function relayoutKeepingDead() {
+  const fresh = layoutCups(cupCount, P);
+  fresh.forEach((c, i) => c.alive = cups[i] ? cups[i].alive : true);
+  return fresh;
+}
+
+// ---- camera / projection -----------------------------------------------------
+function project(x, y, z) {
+  const sp = Math.sin(CAM.pitch), cp = Math.cos(CAM.pitch);
+  const X = x - CAM.x, Y = y - CAM.y, Z = z - CAM.z;
+  const zc = Math.max(0.05, -Y * sp + Z * cp), yc = Y * cp + Z * sp;
+  const F = W * CAM.f;
+  return [W / 2 + F * X / zc, H * CAM.hz - F * yc / zc, F / zc];
+}
+const BALL_START = () => project(0, P.releaseH, 0);
+
+// ---- drawing -----------------------------------------------------------------
+function ryOf(x, y, z, r) { return Math.abs(project(x, y, z + r)[1] - project(x, y, z)[1]) || 1; }
+function drawCup(c) {
+  const [bx, by, s] = project(c.x, 0, c.z), [tx, ty] = project(c.x, P.cupH, c.z);
+  const rt = P.cupRimR * s, rb = rt * 0.68;
+  const ryT = ryOf(c.x, P.cupH, c.z, P.cupRimR), ryB = ryOf(c.x, 0, c.z, P.cupRimR) * 0.68;
+  // soft contact shadow
+  const sh = ctx.createRadialGradient(bx, by, 0, bx, by, rt * 1.5);
+  sh.addColorStop(0, 'rgba(0,0,0,.35)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sh; ctx.beginPath(); ctx.ellipse(bx, by, rt * 1.5, ryB * 1.6, 0, 0, 7); ctx.fill();
+  // body: curved bottom, cylinder shading
+  const g = ctx.createLinearGradient(tx - rt, 0, tx + rt, 0);
+  g.addColorStop(0, '#f0716a'); g.addColorStop(0.35, '#d9433c'); g.addColorStop(0.75, '#b02c27'); g.addColorStop(1, '#7e1c19');
+  ctx.beginPath();
+  ctx.moveTo(tx - rt, ty); ctx.lineTo(bx - rb, by);
+  ctx.ellipse(bx, by, rb, ryB, 0, Math.PI, 0, true);
+  ctx.lineTo(tx + rt, ty);
+  ctx.ellipse(tx, ty, rt, ryT, 0, 0, Math.PI, true);
+  ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+  // rim: dark opening plus a bright lip
+  const inner = ctx.createLinearGradient(0, ty - ryT, 0, ty + ryT);
+  inner.addColorStop(0, '#2b0907'); inner.addColorStop(1, '#6a1b17');
+  ctx.beginPath(); ctx.ellipse(tx, ty, rt, ryT, 0, 0, 7); ctx.fillStyle = inner; ctx.fill();
+  ctx.lineWidth = Math.max(1.5, rt * 0.12); ctx.strokeStyle = '#ffe3df'; ctx.stroke();
+}
+function drawBall(bp, trail) {
+  const [sx, sy, s] = project(bp[0], bp[1], bp[2]), [shx, shy] = project(bp[0], 0, bp[2]);
+  const r = Math.max(P.ballR * s, 3);
+  const lift = Math.min(1, (bp[1] - P.ballR) / 0.6);
+  ctx.fillStyle = `rgba(0,0,0,${0.32 - 0.18 * lift})`;
+  ctx.beginPath(); ctx.ellipse(shx, shy, r * (1 + 0.5 * lift), r * 0.4 * (1 + 0.5 * lift), 0, 0, 7); ctx.fill();
+  const g = ctx.createRadialGradient(sx - r * 0.35, sy - r * 0.4, r * 0.1, sx, sy, r);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#eceff2'); g.addColorStop(1, '#aab2ba');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, r, 0, 7); ctx.fill();
+}
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.imageSmoothingQuality = 'high';
+  ctx.clearRect(0, 0, W, H);
+  const bg = ctx.createLinearGradient(0, 0, 0, H * 0.5); bg.addColorStop(0, '#b24a45'); bg.addColorStop(1, '#e0b08a');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // table
+  const hw = P.tableHalfW, z0 = P.tableZ0, z1 = P.tableZ1;
+  const tbl = [[-hw, 0, z0], [hw, 0, z0], [hw, 0, z1], [-hw, 0, z1]].map((q) => project(...q));
+  const tg = ctx.createLinearGradient(0, tbl[3][1], 0, tbl[0][1]);
+  tg.addColorStop(0, '#2c7a4d'); tg.addColorStop(1, '#3a9561');
+  ctx.beginPath(); tbl.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
+  ctx.fillStyle = tg; ctx.fill(); ctx.strokeStyle = '#eef6f0'; ctx.lineWidth = 4; ctx.stroke();
+  const a = project(0, 0, z0), b = project(0, 0, z1);
+  ctx.strokeStyle = 'rgba(238,246,240,.85)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+  // cups far to near
+  cups.map((c, i) => i).filter((i) => cups[i].alive).sort((i, j) => cups[j].z - cups[i].z).forEach((i) => drawCup(cups[i]));
+  if (calib) {
+    const c = cups[calib.target], pulse = 0.5 + 0.5 * Math.sin(performance.now() / 160);
+    const [tx, ty, ts] = project(c.x, P.cupH, c.z); const ry = ryOf(c.x, P.cupH, c.z, P.cupRimR);
+    const gl = ctx.createRadialGradient(tx, ty, 0, tx, ty, P.cupRimR * ts * (3 + pulse));
+    gl.addColorStop(0, 'rgba(255,224,80,.75)'); gl.addColorStop(1, 'rgba(255,224,80,0)');
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(tx, ty, P.cupRimR * ts * (3 + pulse), 0, 7); ctx.fill();
+    ctx.strokeStyle = `rgba(255,224,80,${0.7 + 0.3 * pulse})`; ctx.lineWidth = 4 + 2 * pulse; ctx.beginPath();
+    ctx.ellipse(tx, ty, P.cupRimR * ts * 1.3, ry * 1.4, 0, 0, 7); ctx.stroke();
+    const [bsx, bsy] = project(0, P.releaseH, 0);
+    ctx.strokeStyle = 'rgba(255,224,80,.85)'; ctx.lineWidth = 3; ctx.setLineDash([3, 8]); ctx.beginPath(); ctx.moveTo(bsx, bsy); ctx.lineTo(tx, ty); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#ffe050'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(`AIM HERE ${calib.done + 1}/10  (chance ${calib.tries + 1}/2)`, tx, ty - ry * 1.4 - 10);
+  }
+  // ball (always available: unlimited throws in the prototype)
+  const bp = anim ? anim.pos : [0, P.releaseH, 0];
+  drawBall(bp);
+  if (!anim) {
+    const [sx, sy, s] = project(bp[0], bp[1], bp[2]);
+    ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 5]); ctx.beginPath();
+    ctx.arc(sx, sy, grabRadius(s), 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // flick trail
+  if (drag && drag.pts.length > 1) {
+    ctx.strokeStyle = 'rgba(255,210,74,.9)'; ctx.lineWidth = 4; ctx.beginPath();
+    drag.pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke();
+  }
+  ctx.fillStyle = '#fff'; ctx.font = '13px system-ui'; ctx.textAlign = 'left';
+  ctx.fillText(`cups ${cups.filter((c) => c.alive).length}/${cups.length}   throws ${throwCount}   (unlimited)`, 10, 18);
+  if (toast) { ctx.textAlign = 'center'; ctx.fillStyle = '#ffd24a'; ctx.fillText(toast, W / 2, H * 0.62); }
+}
+const grabRadius = (s) => Math.max(P.ballR * s * I.hitMult, 36);
+
+// ---- attempt log, calibration, saved profile ------------------------------------------
+const STORE = 'cuppong-proto-v1';
+const DEF_I = {...I}, DEF_A = {...A};
+let attempts = [], calib = null;
+let calibrated = false;
+function save() { try { localStorage.setItem(STORE, JSON.stringify({calibrated, I: {minSpeed: I.minSpeed, maxSpeed: I.maxSpeed, curve: I.curve, angleRangeDeg: I.angleRangeDeg, angleOffsetDeg: I.angleOffsetDeg}, A: {magnetRadius: A.magnetRadius, magnet: A.magnet, formationPull: A.formationPull}, attempts: attempts.slice(-50)})); } catch (e) {} }
+function loadProfile() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE) || 'null'); if (!d) return;
+    Object.assign(I, d.I || {}); Object.assign(A, d.A || {}); attempts = d.attempts || []; calibrated = !!d.calibrated;
+    $('profileNote').textContent = 'Loaded your saved helper profile.';
+  } catch (e) {}
+}
+$('resetHelper').onclick = () => { calibrated = false; Object.assign(I, DEF_I); Object.assign(A, DEF_A); attempts = []; try { localStorage.removeItem(STORE); } catch (e) {} buildAll(); dumpCfg(); renderAttempts(); $('profileNote').textContent = 'Helper reset to defaults.'; };
+function renderAttempts() {
+  const rows = attempts.slice(-10).map((a, i, arr) => {
+    const n = attempts.length - arr.length + i + 1;
+    return `<tr><td>${n}</td><td>${a.speed.toFixed(2)}</td><td>${a.angDeg.toFixed(1)}</td><td>${a.rawA}/${a.rawP}</td><td>${a.shA}/${a.shP}</td><td>${a.target || '-'}</td><td>${a.outcome}${a.bounces ? ' b' + a.bounces : ''}</td></tr>`;
+  }).join('');
+  $('attempts').innerHTML = `<table style="border-collapse:collapse;width:100%"><tr style="color:#9fb3c4"><td>#</td><td>sh/s</td><td>deg</td><td>raw a/p</td><td>sent a/p</td><td>target</td><td>result</td></tr>${rows}</table>`;
+}
+function describeCup(i) {
+  const c = cups[i];
+  const zs = [...new Set(cups.map((q) => q.z.toFixed(3)))].sort((a, b) => a - b); // rows from the front
+  const row = zs.indexOf(c.z.toFixed(3));
+  const inRow = cups.filter((q) => q.z.toFixed(3) === c.z.toFixed(3)).sort((a, b) => a.x - b.x);
+  const pos = inRow.indexOf(c) + 1;
+  const rowName = row === 0 ? 'the FRONT cup' : row === zs.length - 1 ? 'the BACK row' : `row ${row + 1} of ${zs.length} (counting from you)`;
+  const side = inRow.length === 1 ? 'centre' : pos === 1 ? 'leftmost' : pos === inRow.length ? 'rightmost' : `${pos}${['th', 'st', 'nd', 'rd'][pos] || 'th'} from the left`;
+  return `${rowName}, ${side}`;
+}
+function calibHud() {
+  hudText = `CALIBRATION target ${calib.done + 1}/10, chance ${calib.tries + 1}/2 - hit: ${describeCup(calib.target)}.\nFlick toward the glowing cup (helper is off)`;
+}
+function pickTarget() {
+  // One glowing target at a time, a different place every throw: every cup once in random
+  // order (so left, right, near and far are all covered), never the same cup twice in a row.
+  if (!calib.queue || !calib.queue.length) {
+    const order = cups.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    if (order.length > 1 && order[0] === calib.target) order.push(order.shift());
+    calib.queue = order;
+  }
+  calib.target = calib.queue.shift();
+  calib.tries = 0;
+  calibHud();
+}
+function toggleCalibration() {
+  if (calib) { calib = null; hudText = 'calibration skipped - helper uses its current settings'; return; }
+  cups = layoutCups(cupCount, P); anim = null;
+  calib = {samples: [], target: -1, done: 0, tries: 0}; pickTarget();
+}
+$('calibBtn').onclick = toggleCalibration;
+$('calibTop').onclick = toggleCalibration;
+function onAttempt(m, angleQ, powerQ, sim) {
+  const cupIdx = calib ? calib.target : null;
+  attempts.push({speed: m.speed, angDeg: m.angRawDeg, rawA: m.rawA, rawP: m.rawP, shA: angleQ, shP: powerQ, target: cupIdx === null ? null : '#' + cupIdx, outcome: sim.outcome, bounces: sim.bounces});
+  if (calib) {
+    const c = cups[calib.target];
+    calib.samples.push({speed: m.speed, angDeg: m.angRawDeg, target: {x: c.x, z: c.z}});
+    const hit = sim.outcome === 'in' && sim.cup === calib.target;
+    if (hit || calib.tries >= 1) { // hit it, or both chances used: next target
+      calib.done++;
+      if (calib.done >= 10) finishCalibration(); else pickTarget();
+    } else { // missed: one more chance at the same cup
+      calib.tries = 1; calibHud();
+    }
+  }
+  save(); renderAttempts();
+}
+function finishCalibration() {
+  const before = JSON.stringify({I: [I.minSpeed, I.maxSpeed, I.angleRangeDeg, I.angleOffsetDeg], A: [A.magnetRadius, A.magnet, A.formationPull]});
+  const r = calibrate(calib.samples, P, I, A);
+  calib = null;
+  if (!r) { hudText = `need at least ${MIN_SAMPLES} throws`; return; }
+  Object.assign(I, r.input); Object.assign(A, r.assist); calibrated = true;
+  buildAll(); dumpCfg(); save();
+  const rp = r.report;
+  $('profileNote').textContent = `Calibrated from ${rp.n} throws. Your typical flick ${rp.medianSpeed} sh/s (spread ${rp.speedSigma}), sideways lean ${rp.leanDeg} deg. ${rp.angleRangeLearned ? 'Full-aim angle ' + I.angleRangeDeg + ' deg learned.' : 'Full-aim angle kept at ' + I.angleRangeDeg + ' deg (one centre target cannot measure it).'} Landing error ${(rp.rmsBefore * 100).toFixed(0)} cm -> ${(rp.rmsAfter * 100).toFixed(0)} cm. Helper strength set: pull ${A.formationPull}, magnet ${A.magnet}, radius ${A.magnetRadius}. Saved in this browser.`;
+  hudText = 'calibration done - see the note under "Attempt log"';
+  toast = 'calibrated!'; setTimeout(() => toast = '', 1500);
+}
+
+loadProfile(); buildAll(); dumpCfg(); renderAttempts();
+if (!calibrated) { calib = {samples: [], target: -1, done: 0, tries: 0}; pickTarget(); } // first visit: start calibrating right away
+
+// ---- side / top view ------------------------------------------------------------
+function drawSide() {
+  const mode = $('viewSel').value;
+  if (mode === 'off') return;
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sctx.lineJoin = 'round'; sctx.lineCap = 'round';
+  sctx.clearRect(0, 0, SW, SH);
+  const pad = 14, z0 = P.tableZ0, z1 = P.tableZ1;
+  let X, Y; // world (x,y,z) -> screen
+  if (mode === 'side') {
+    const k = Math.min((SW - 2 * pad) / (z1 - z0), (SH - 2 * pad - 6) / 1.0);
+    const base = SH - pad;
+    X = (x, y, z) => pad + (z - z0) * k; Y = (x, y, z) => base - y * k;
+    // table
+    sctx.fillStyle = '#2f7d4e'; sctx.fillRect(X(0, 0, z0), base, (z1 - z0) * k, 4);
+    // cups
+    cups.forEach((c) => {
+      if (!c.alive) return;
+      sctx.fillStyle = 'rgba(217,67,60,.75)';
+      sctx.fillRect(X(0, 0, c.z - P.cupRimR), Y(0, P.cupH, 0), 2 * P.cupRimR * k, P.cupH * k);
+    });
+    // thrower marker
+    sctx.fillStyle = '#9fb3c4'; sctx.font = '11px system-ui';
+    sctx.fillText('you', X(0, 0, 0) - 8, base - 6);
+    sctx.fillText('far end', X(0, 0, z1) - 40, 12);
+    sctx.fillText('side view: distance → / height ↑', pad, 12);
+  } else {
+    const k = Math.min((SW - 2 * pad) / (2 * P.tableHalfW), (SH - 2 * pad) / (z1 - z0));
+    const cx = SW / 2, base = SH - pad;
+    X = (x, y, z) => cx + x * k; Y = (x, y, z) => base - (z - z0) * k;
+    sctx.fillStyle = '#2f7d4e'; sctx.fillRect(X(-P.tableHalfW, 0, 0), Y(0, 0, z1), 2 * P.tableHalfW * k, (z1 - z0) * k);
+    cups.forEach((c) => {
+      if (!c.alive) return;
+      sctx.fillStyle = '#d9433c'; sctx.beginPath(); sctx.arc(X(c.x, 0, c.z), Y(c.x, 0, c.z), P.cupRimR * k, 0, 7); sctx.fill();
+    });
+    sctx.fillStyle = '#9fb3c4'; sctx.font = '11px system-ui'; sctx.fillText('top view: left/right drift', pad, 12);
+  }
+  // full flight path of the last throw
+  let info = null;
+  if (lastSim) {
+    const f = lastSim.frames, n = f.length / 3;
+    sctx.strokeStyle = 'rgba(255,210,74,.8)'; sctx.lineWidth = 2; sctx.setLineDash([5, 4]); sctx.beginPath();
+    for (let i = 0; i < n; i++) { const x = f[i * 3], y = f[i * 3 + 1], z = f[i * 3 + 2]; i ? sctx.lineTo(X(x, y, z), Y(x, y, z)) : sctx.moveTo(X(x, y, z), Y(x, y, z)); }
+    sctx.stroke(); sctx.setLineDash([]);
+    // table contacts: local minima touching the table
+    let first = -1, contacts = 0;
+    for (let i = 1; i < n - 1; i++) {
+      const y = f[i * 3 + 1], yp = f[(i - 1) * 3 + 1], yn = f[(i + 1) * 3 + 1];
+      if (y < P.ballR + 0.06 && yp > y && yn >= y) { // local minimum near the table = a bounce
+        contacts++; if (first < 0) first = i;
+        sctx.fillStyle = '#ff6b6b'; sctx.beginPath(); sctx.arc(X(f[i * 3], y, f[i * 3 + 2]), Y(f[i * 3], y, f[i * 3 + 2]), 4, 0, 7); sctx.fill();
+      }
+    }
+    const ex = f[(n - 1) * 3], ey = f[(n - 1) * 3 + 1], ez = f[(n - 1) * 3 + 2];
+    sctx.fillStyle = lastSim.outcome === 'in' ? '#4cd964' : '#ffffff';
+    sctx.beginPath(); sctx.arc(X(ex, ey, ez), Y(ex, ey, ez), 5, 0, 7); sctx.fill();
+    const fz = first >= 0 ? f[first * 3 + 2].toFixed(2) : '-';
+    const fx = first >= 0 ? f[first * 3].toFixed(2) : '-';
+    let apex = 0; for (let i = 0; i < n; i++) apex = Math.max(apex, f[i * 3 + 1]);
+    info = [`1st touch z=${fz} x=${fx} | bounces ${lastSim.bounces} | apex ${apex.toFixed(2)}m`, `end z=${ez.toFixed(2)} x=${ex.toFixed(2)} | ${lastSim.outcome}${lastSim.cup >= 0 ? ' cup#' + lastSim.cup : ''}`];
+  }
+  // live ball
+  if (anim) { const b = anim.pos; sctx.fillStyle = '#fff'; sctx.beginPath(); sctx.arc(X(b[0], b[1], b[2]), Y(b[0], b[1], b[2]), 4.5, 0, 7); sctx.fill(); }
+  if (info) { sctx.fillStyle = '#cfe3f3'; sctx.font = '11px ui-monospace, monospace'; sctx.textAlign = 'left'; sctx.fillText(info[0], pad, 28); sctx.fillText(info[1], pad, 42); }
+}
+
+// ---- flick input -------------------------------------------------------------
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => {
+  const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  const [bx, by, s] = BALL_START();
+  if (Math.hypot(x - bx, y - by) > grabRadius(s)) { toast = 'start the flick on the ball'; setTimeout(() => toast = '', 900); return; }
+  if (anim) finishAnim(); // unlimited tries: a new flick cuts the running throw short and applies its result
+  canvas.setPointerCapture(e.pointerId);
+  drag = {pts: [{x, y, t: e.timeStamp}]};
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const r = canvas.getBoundingClientRect();
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ev of (evs.length ? evs : [e])) drag.pts.push({x: ev.clientX - r.left, y: ev.clientY - r.top, t: ev.timeStamp});
+});
+canvas.addEventListener('pointerup', (e) => {
+  if (!drag) return;
+  const pts = drag.pts; drag = null;
+  const m = measureFlick(pts);
+  if (m.reason) { hudText = `flick ignored: ${m.reason}\n${m.debug}`; toast = m.reason; setTimeout(() => toast = '', 900); return; }
+  m.rawA = m.angleQ; m.rawP = m.powerQ;
+  if ($('assistOn').checked && !calib) {
+    const sh = shapeThrow({angleQ: m.angleQ, powerQ: m.powerQ}, cups, P, A);
+    m.rawQ = `raw angleQ ${m.angleQ} powerQ ${m.powerQ} -> shaped ${sh.angleQ}/${sh.powerQ} ${JSON.stringify(sh.steps)}`;
+    m.angleQ = sh.angleQ; m.powerQ = sh.powerQ;
+  }
+  startThrow(m.angleQ, m.powerQ, false, m);
+});
+canvas.addEventListener('pointercancel', () => { drag = null; });
+
+function measureFlick(pts) {
+  const end = pts[pts.length - 1].t - I.trimMs;
+  const start = end - I.windowMs;
+  let win = pts.filter((p) => p.t >= start && p.t <= end);
+  if (win.length < 2) win = pts.slice(-2); // sparse events (fast mouse, slow sampling): use the last two
+  if (win.length < 2) return {reason: 'too few samples', debug: `samples: ${pts.length}`};
+  const a = win[0], b = win[win.length - 1];
+  const dt = (b.t - a.t) / 1000;
+  if (dt <= 0) return {reason: 'no time', debug: ''};
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const speed = Math.hypot(dx, dy) / dt / H; // screen-heights per second
+  const angRaw = Math.atan2(dx, -dy); // 0 = straight up, +right
+  const ang = angRaw - I.angleOffsetDeg / 57.29578;
+  const debug = `speed ${speed.toFixed(2)} sh/s  angle ${(ang * 57.3).toFixed(1)}deg  samples ${win.length}/${pts.length}  dt ${(dt * 1000).toFixed(0)}ms`;
+  if (dy >= 0) return {reason: 'flick upward', debug};
+  if (speed < I.minSpeed) return {reason: 'too slow', debug};
+  const t = Math.min(1, Math.max(0, (speed - I.minSpeed) / (I.maxSpeed - I.minSpeed)));
+  const powerQ = Math.round(255 * Math.pow(t, I.curve));
+  const angleQ = Math.max(-127, Math.min(127, Math.round(ang / (I.angleRangeDeg / 57.29578) * 127)));
+  return {angleQ, powerQ, speed, ang, angRawDeg: angRaw * 57.29578, debug};
+}
+
+// ---- throw + animation ---------------------------------------------------------
+function startThrow(angleQ, powerQ, isReplay, m) {
+  const sim = simulate(angleQ, powerQ, cups, P);
+  const aliveBefore = cups.filter((c) => c.alive).length;
+  lastThrow = {angleQ, powerQ}; lastSim = sim;
+  const v = launch(angleQ, powerQ, P);
+  hudText = (m ? m.debug + '\n' + (m.rawQ ? m.rawQ + '\n' : '') : 'replay\n') +
+    `angleQ ${angleQ}  powerQ ${powerQ}  v0 ${Math.hypot(v.vx, v.vy, v.vz).toFixed(2)} m/s\n` +
+    `result: ${sim.outcome}${sim.cup >= 0 ? ' cup#' + sim.cup : ''}  rimHits ${sim.rimHits}  bounces ${sim.bounces}  ends z=${sim.frames[sim.frames.length - 1].toFixed(2)}`;
+  if (!isReplay && m) onAttempt(m, angleQ, powerQ, sim);
+  anim = {sim, i: 0, acc: 0, pos: [0, P.releaseH, 0], isReplay, cupsBefore: aliveBefore};
+}
+function finishAnim() {
+  if (!anim) return;
+  if (!anim.isReplay) {
+    throwCount++;
+    if (anim.sim.outcome === 'in' && !calib) cups[anim.sim.cup].alive = false;
+    if (!cups.some((c) => c.alive)) { toast = 'all cups cleared - resetting'; setTimeout(newGame, 1400); }
+  }
+  anim = null;
+}
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.05); last = now;
+  if (anim) {
+    const f = anim.sim.frames, n = f.length / 3;
+    // frames are every 4 ticks of 1/240 s = 1/60 s; interpolate so motion is smooth at any refresh rate
+    anim.acc += dt * 60 * ($('slow').checked ? 0.25 : 1);
+    const i = Math.min(n - 1, Math.floor(anim.acc)), j = Math.min(n - 1, i + 1), t = Math.min(1, anim.acc - i);
+    anim.pos = [0, 1, 2].map((k) => f[i * 3 + k] + (f[j * 3 + k] - f[i * 3 + k]) * t);
+    if (anim.acc >= n - 1) finishAnim();
+  }
+  draw(); drawSide();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+setInterval(() => { $('hud').textContent = hudText; $('calibTop').textContent = calib ? `Skip calibration (${calib.done}/10)` : 'Calibrate (10)'; }, 100);
+</script>
+</body>
+</html>

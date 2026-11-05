@@ -1,63 +1,54 @@
-import {generateRoomCode, normalizeRoomCode} from './game.js';
-import {RpsMatch, cleanName, MAX_ROOM_NAME_LENGTH} from './match.js';
+import {generateRoomCode, normalizeRoomCode} from './room-code.js';
+import {cleanName, randomName, MAX_ROOM_NAME_LENGTH} from './names.js';
+import {Room} from './room.js';
 import {createTransport} from './net.js';
-import {HandStageTube} from './hands-tube.js';
 import {createStore} from './storage.js';
+import {allTags, filterGames, findGame, playersLabel} from './games.js';
 
 const $ = (id) => document.getElementById(id);
 const HINT_AFTER_MS = 20_000;
-const REVEAL_FAILSAFE_MS = 5_000;
 
-const stage = new HandStageTube($('hands'));
-
-let match = null;
+let room = null;
 let roomId = null;
 let hintTimer = null;
-let anim = null; // animation progress for the current round, see drive()
-let shownScores = {win: 0, lose: 0, draw: 0};
+let hintVisible = false;
 let myName = 'Player';
 let qrAutoOpened = false;
+let catalogTag = null; // category filter in the room's game picker
+let catalogEnabled = null; // whether picker cards can be clicked; re-render only when it changes
+let hosted = null; // the running game: {session, container, instance}
 
-const DEFAULT_CREATOR_NAME = 'Ramcharan';
-const DEFAULT_JOINER_NAME = 'Kalicharan';
 const DEFAULT_ROOM_NAME = 'Kali Pahadi Ke Pichhe';
 const store = createStore();
 
-// The name box holds a real value the player erases and retypes, not a hint.
-// It starts as the last name they typed. Only when there is none does it fall
-// back to a role default: Ramcharan when creating, Kalicharan when joining
-// (so two first-time players never both start as the same name).
-// Names used before are also offered as chips under the box.
-let nameEdited = false;
-const [lastName] = store.names();
-if (lastName) { $('name-input').value = lastName; nameEdited = true; }
-
-function syncDefaultName() {
-  if (nameEdited) return;
-  const joining = $('code-input').value.trim() !== '' || !$('invite-note').hidden;
-  $('name-input').value = joining ? DEFAULT_JOINER_NAME : DEFAULT_CREATOR_NAME;
+// Two screens: Home (name, create or join) and the Room you are in.
+function showScreen(id) {
+  $('screen-home').hidden = id !== 'screen-home';
+  $('screen-room').hidden = id !== 'screen-room';
 }
+
+// The name box holds a real value the player erases and retypes, not a hint.
+// Each visit starts with a random name from the list in js/names.js. A name belongs
+// to a room, not to the player: it is saved with the room, and coming back to that
+// room (its link, its code, or "Recent rooms") brings the same name back. Nothing
+// remembers a name across rooms or visits.
+let nameEdited = false; // the player typed in the box this visit
+$('name-input').value = randomName();
 $('name-input').addEventListener('input', () => { nameEdited = true; });
-syncDefaultName();
-$('code-input').addEventListener('input', syncDefaultName);
 
-// --- Remembered names and rooms ------------------------------------------------
+/** If this room was visited before, show the name used there (unless one was typed now). */
+function prefillNameForRoom(code) {
+  if (nameEdited || !code) return;
+  const known = store.rooms().find((r) => r.code === code);
+  if (known?.myName) $('name-input').value = known.myName;
+}
+$('code-input').addEventListener('input', () => prefillNameForRoom(normalizeRoomCode($('code-input').value)));
+
+// --- Remembered rooms ------------------------------------------------------------
 function renderRecents() {
-  const names = store.names();
-  const chips = $('recent-names');
-  chips.replaceChildren(...names.map((name) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'chip';
-    b.textContent = name;
-    b.addEventListener('click', () => { $('name-input').value = name; nameEdited = true; });
-    return b;
-  }));
-  chips.hidden = names.length === 0;
-
   const rooms = store.rooms();
   $('recent-rooms').hidden = rooms.length === 0 || !$('invite-note').hidden;
-  $('recent-rooms-list').replaceChildren(...rooms.map((room) => {
+  $('recent-rooms-list').replaceChildren(...rooms.map((entry) => {
     const li = document.createElement('li');
 
     const go = document.createElement('button');
@@ -65,24 +56,24 @@ function renderRecents() {
     go.className = 'room-btn';
     const label = document.createElement('span');
     label.className = 'room-label';
-    label.textContent = room.name ?? 'Room';
+    label.textContent = entry.name ?? 'Room';
     const code = document.createElement('span');
     code.className = 'room-code-text';
-    code.textContent = room.code;
+    code.textContent = entry.code;
     go.append(label, code);
-    go.title = `Rejoin as ${room.myName || 'a new name'}`;
-    go.addEventListener('click', () => enterRoom(room.code, {
-      creator: room.role === 'creator',
-      name: nameEdited ? null : room.myName || null, // a name typed this visit wins
-      roomName: room.name,
+    go.title = `Rejoin as ${entry.myName || 'a new name'}`;
+    go.addEventListener('click', () => enterRoom(entry.code, {
+      creator: entry.role === 'creator',
+      name: nameEdited ? null : entry.myName || null, // a name typed this visit wins
+      roomName: entry.name,
     }));
 
     const forget = document.createElement('button');
     forget.type = 'button';
     forget.className = 'forget ghost';
-    forget.textContent = '\u2715';
-    forget.setAttribute('aria-label', `Forget room ${room.code}`);
-    forget.addEventListener('click', () => { store.forgetRoom(room.code); renderRecents(); });
+    forget.textContent = '✕';
+    forget.setAttribute('aria-label', `Forget room ${entry.code}`);
+    forget.addEventListener('click', () => { store.forgetRoom(entry.code); renderRecents(); });
 
     li.append(go, forget);
     return li;
@@ -102,64 +93,65 @@ function showHomeError(text) {
   $('home-error').hidden = !text;
 }
 
+/** Undo the invite-link layout (hidden create block, join-only note). */
+function clearInvite() {
+  $('invite-note').hidden = true;
+  $('create-block').hidden = false;
+  $('code-input').value = '';
+  showHomeError('');
+}
+
+// --- Entering and leaving a room ---------------------------------------------
 // name / roomName override the form (used when rejoining a remembered room).
 function enterRoom(code, {creator = false, name = null, roomName = null} = {}) {
   roomId = code;
-  myName = cleanName(name ?? $('name-input').value, creator ? DEFAULT_CREATOR_NAME : DEFAULT_JOINER_NAME);
+  myName = cleanName(name ?? $('name-input').value, randomName());
   const hostedRoomName = creator
     ? cleanName(roomName ?? $('room-name-input').value, DEFAULT_ROOM_NAME, MAX_ROOM_NAME_LENGTH)
     : '';
-  if (name === null && nameEdited) store.rememberName(myName); // never remember the defaults
   store.rememberRoom({code, name: hostedRoomName || null, myName, role: creator ? 'creator' : 'joiner'});
-  $('label-me').textContent = myName;
-  $('label-them').textContent = 'Friend';
   history.replaceState(null, '', inviteLink(code));
   $('room-code').textContent = code;
-  $('screen-home').hidden = true;
-  $('screen-game').hidden = false;
+  showScreen('screen-room');
 
-  shownScores = {win: 0, lose: 0, draw: 0};
   qrAutoOpened = creator;
   setQr(creator);
-  match = new RpsMatch({
+  catalogEnabled = null;
+  hintVisible = false;
+  room = new Room({
     transport: createTransport(code),
     roomId: code,
     name: myName,
     roomName: hostedRoomName,
-    onChange: (s) => { drive(s); render(s); },
+    onChange: render,
   });
-  const s = match.snapshot();
-  drive(s);
-  render(s);
+  render(room.snapshot());
 
   clearTimeout(hintTimer);
   hintTimer = setTimeout(() => {
-    if (match?.snapshot().phase === 'waiting') {
-      $('hint').hidden = false;
-      $('hint').textContent =
-        'Still waiting. Make sure your friend opened the link or typed the code. ' +
-        'If it never connects, try another network (some corporate Wi-Fi blocks peer-to-peer).';
+    if (room?.snapshot().phase === 'waiting') {
+      hintVisible = true;
+      render(room.snapshot());
     }
   }, HINT_AFTER_MS);
 }
 
 function leaveRoom() {
   clearTimeout(hintTimer);
-  match?.leave();
-  match = null;
-  stage.reset();
-  anim = null;
+  unmountGame();
+  room?.leave();
+  room = null;
   setQr(false);
+  clearInvite();
+  document.querySelector('main').classList.remove('wide');
   history.replaceState(null, '', location.pathname);
-  $('screen-game').hidden = true;
-  $('screen-home').hidden = false;
-  $('hint').hidden = true;
+  showScreen('screen-home');
   renderRecents();
 }
 
 // --- QR code -------------------------------------------------------------------
 // qrcode-generator is loaded only when the QR is first shown, so a CDN hiccup
-// can never break the game itself; the link and copy button always work.
+// can never break the room itself; the link and copy button always work.
 let qrModule = null;
 let qrFor = null;
 
@@ -201,106 +193,167 @@ function setQr(open) {
   if (open && roomId) renderQr(inviteLink(roomId));
 }
 
-// --- Animation driver --------------------------------------------------------
-// Turns match state into hand animation. Called on every state change and is
-// idempotent: each step happens once per round (keyed by session + round).
-//   my pick       -> my hand rises and makes a fist
-//   friend's pick -> their hand rises and makes a fist
-//   both hashes   -> fists pump while the reveals cross the network
-//   result        -> pump finishes, both hands open at once, result shown
-function drive(s) {
-  const key = `${s.session}:${s.round}`;
-  if (!anim || anim.key !== key) {
-    stage.reset();
-    anim = {key, me: null, them: null, shaking: false, revealing: false, done: false};
-  }
-  const a = anim;
-
-  if (s.phase === 'waiting') return;
-  if (s.phase === 'cheat') {
-    if (!a.cheat) { a.cheat = true; stage.reset(); }
-    return;
-  }
-
-  if (s.myMove && !a.me) a.me = stage.lockIn('me');
-  if (s.theirCommitted && !a.them) a.them = stage.lockIn('them');
-  const locked = () => Promise.all([a.me, a.them]);
-
-  if ((s.phase === 'revealing' || s.phase === 'result') && !a.shaking) {
-    a.shaking = true;
-    locked().then(() => { if (anim === a) stage.startShake(); });
-  }
-  if (s.phase === 'result' && !a.revealing) {
-    a.revealing = true;
-    // Failsafe: browsers pause animation in hidden tabs, so never let the result
-    // depend on the animation finishing.
-    setTimeout(() => {
-      if (anim !== a || a.done) return;
-      a.done = true;
-      render(match.snapshot());
-    }, REVEAL_FAILSAFE_MS);
-    locked().then(async () => {
-      if (anim !== a) return;
-      stage.startShake();
-      await stage.reveal({mine: s.myMove, theirs: s.theirMove, outcome: s.outcome});
-      if (anim !== a) return;
-      a.done = true;
-      render(match.snapshot());
-    });
-  }
-}
-
-// --- Text / controls -----------------------------------------------------------
-const STATUS = {
-  waiting: 'Waiting for your friend to join…',
-  choosing: 'Pick your move',
-  committed: 'Locked in. Waiting for your friend…',
-  revealing: 'Revealing…',
-};
-const OUTCOME = {win: ['You win! 🎉', 'win'], lose: ['You lose 😬', 'lose'], draw: ['It’s a draw', '']};
+// --- The room screen -----------------------------------------------------------
+const INCOMPATIBLE = 'Your friend is using a different version of the app. Ask them to refresh the page, and refresh yours too.';
 
 function render(s) {
   const them = s.opponentName ?? 'Friend';
   $('room-title').textContent = s.roomName ?? 'Room';
   if (s.roomName && roomId) store.updateRoomName(roomId, s.roomName);
-  $('label-them').textContent = them;
   if (s.phase !== 'waiting' && qrAutoOpened) { qrAutoOpened = false; setQr(false); }
-  const resultVisible = s.phase === 'result' && anim?.done;
-  if (s.phase !== 'result' || resultVisible) shownScores = s.scores; // no spoilers mid-animation
 
-  $('score-win').textContent = shownScores.win;
-  $('score-draw').textContent = shownScores.draw;
-  $('score-lose').textContent = shownScores.lose;
-  $('round-label').textContent = s.phase === 'waiting' ? '' : `Round ${s.round}`;
+  const people = [['me', myName]];
+  if (s.phase !== 'waiting') people.push(['them', them]);
+  $('room-people').replaceChildren(...people.map(([who, name]) => {
+    const span = document.createElement('span');
+    span.className = `who ${who}`;
+    span.textContent = name;
+    return span;
+  }));
 
-  const status = $('status');
-  status.className = 'center';
-  if (resultVisible) {
-    const [text, cls] = OUTCOME[s.outcome];
-    status.textContent = text;
-    if (cls) status.classList.add(cls);
-  } else if (s.phase === 'cheat') {
-    status.textContent = s.error;
-    status.classList.add('lose');
-  } else if (s.phase === 'result') {
-    status.textContent = STATUS.revealing;
-  } else {
-    status.textContent = s.phase === 'choosing' && s.theirCommitted
-      ? `${them} has locked in. Your move!`
-      : s.phase === 'committed' ? `Locked in. Waiting for ${them}…` : STATUS[s.phase];
+  const waiting = s.phase === 'waiting';
+  $('room-waiting').hidden = !waiting;
+  $('room-waiting').textContent = 'Waiting for your friend to join…';
+  $('room-hint').hidden = !(waiting && hintVisible);
+  $('room-hint').textContent =
+    'Still waiting. Make sure your friend opened the link or typed the code. ' +
+    'If it never connects, try another network (some corporate Wi-Fi blocks peer-to-peer).';
+
+  const notice = s.phase === 'incompatible' ? INCOMPATIBLE : s.notice;
+  $('room-notice').hidden = !notice;
+  $('room-notice').textContent = notice ?? '';
+
+  // Picker while nobody has proposed anything; clickable only once a friend is here.
+  $('room-picker').hidden = !(waiting || s.phase === 'idle');
+  const enabled = s.phase === 'idle';
+  if (enabled !== catalogEnabled) { catalogEnabled = enabled; renderCatalog(); }
+
+  const proposing = s.phase === 'proposing';
+  const invited = s.phase === 'invited';
+  $('room-proposal').hidden = !(proposing || invited);
+  if (proposing || invited) {
+    const title = findGame(s.pending.gameId)?.title ?? 'a game';
+    $('proposal-text').textContent = invited
+      ? `${them} wants to play ${title}.`
+      : `Waiting for ${them} to accept ${title}…`;
   }
-  if (s.phase !== 'waiting') $('hint').hidden = true;
+  $('btn-accept').hidden = !invited;
+  $('btn-decline').hidden = !invited;
+  $('btn-cancel').hidden = !proposing;
 
-  for (const btn of document.querySelectorAll('.move')) {
-    btn.disabled = s.phase !== 'choosing';
-    btn.classList.toggle('selected', btn.dataset.move === s.myMove);
-  }
-  $('moves').hidden = !(s.phase === 'waiting' || s.phase === 'choosing');
-  $('btn-next').hidden = !(resultVisible || s.phase === 'cheat');
+  const playing = s.phase === 'playing';
+  $('room-game').hidden = !playing;
+  const game = playing ? findGame(s.session.gameId) : null;
+  $('game-title').textContent = game?.title ?? '';
+  $('game-away').hidden = !(playing && s.away);
+  $('btn-again').hidden = !(playing && s.session.result);
+  document.querySelector('main').classList.toggle('wide', game?.layout === 'wide');
+
+  syncGame(s);
 }
 
+// --- Hosting a game --------------------------------------------------------------
+// The room says which session is running; this loads that game's module and mounts
+// it into its own container, and tears it down when the session ends.
+function syncGame(s) {
+  const session = s.phase === 'playing' ? s.session : null;
+  if (hosted && hosted.session !== session) unmountGame();
+  if (session && !hosted) mountGame(session);
+}
+
+async function mountGame(session) {
+  const container = document.createElement('div');
+  const entry = {session, container, instance: null};
+  hosted = entry;
+  $('game-stage').append(container);
+  const game = findGame(session.gameId);
+  try {
+    const mod = await game.load();
+    const instance = await mod.createGame({session, container});
+    if (hosted !== entry) { instance?.destroy?.(); return; } // ended while loading
+    entry.instance = instance;
+  } catch (err) {
+    console.error(err);
+    if (hosted === entry) {
+      const p = document.createElement('p');
+      p.className = 'error';
+      p.textContent = `Could not load ${game.title}. Go back to the room and try again.`;
+      container.replaceChildren(p);
+    }
+  }
+}
+
+function unmountGame() {
+  const entry = hosted;
+  hosted = null;
+  if (!entry) return;
+  entry.instance?.destroy?.();
+  entry.container.remove();
+}
+
+// --- The game picker -------------------------------------------------------------
+function renderCatalog() {
+  const games = filterGames({query: $('game-search').value, tag: catalogTag});
+
+  $('game-tags').replaceChildren(...[null, ...allTags()].map((tag) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = tag ?? 'All';
+    b.setAttribute('aria-pressed', String(tag === catalogTag));
+    b.addEventListener('click', () => { catalogTag = tag; renderCatalog(); });
+    return b;
+  }));
+
+  $('game-grid').replaceChildren(...games.map((game) => {
+    const ready = game.status === 'ready';
+    const li = document.createElement('li');
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `game-card ${ready ? 'ready' : 'soon'}`;
+    card.disabled = !ready || !catalogEnabled;
+    if (ready && !catalogEnabled) card.title = 'Waiting for your friend to join';
+
+    const icon = document.createElement('span');
+    icon.className = 'icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = game.icon;
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = ready ? 'Play' : 'Soon';
+    const title = document.createElement('span');
+    title.className = 'title';
+    title.textContent = game.title;
+    const blurb = document.createElement('span');
+    blurb.className = 'blurb';
+    blurb.textContent = game.blurb;
+    const tags = document.createElement('span');
+    tags.className = 'tags';
+    tags.append(...game.tags.map((t) => {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = t;
+      return tag;
+    }));
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = ready ? playersLabel(game) : `${playersLabel(game)} · coming soon`;
+
+    card.append(icon, badge, title, blurb, tags, meta);
+    if (ready) card.addEventListener('click', () => room?.propose(game.id));
+    li.append(card);
+    return li;
+  }));
+
+  $('game-count').textContent = `${games.length} ${games.length === 1 ? 'game' : 'games'}`;
+  $('game-empty').hidden = games.length > 0;
+}
+
+// --- Wiring ----------------------------------------------------------------------
 $('btn-create').addEventListener('click', () => enterRoom(generateRoomCode(), {creator: true}));
 $('btn-qr').addEventListener('click', () => setQr($('qr-panel').hidden));
+$('btn-leave').addEventListener('click', leaveRoom);
+$('game-search').addEventListener('input', renderCatalog);
 
 $('join-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -310,11 +363,16 @@ $('join-form').addEventListener('submit', (e) => {
   enterRoom(code);
 });
 
-for (const btn of document.querySelectorAll('.move')) {
-  btn.addEventListener('click', () => match?.pick(btn.dataset.move));
-}
-$('btn-next').addEventListener('click', () => match?.nextRound());
-$('btn-leave').addEventListener('click', leaveRoom);
+$('btn-accept').addEventListener('click', () => room?.accept());
+$('btn-decline').addEventListener('click', () => room?.decline());
+$('btn-cancel').addEventListener('click', () => room?.cancel());
+$('btn-end-game').addEventListener('click', () => room?.endGame());
+$('btn-again').addEventListener('click', () => {
+  const gameId = room?.snapshot().session?.gameId;
+  if (!gameId) return;
+  room.endGame();
+  room.propose(gameId); // the other player has to accept again
+});
 
 $('btn-copy').addEventListener('click', async () => {
   const link = inviteLink(roomId);
@@ -334,8 +392,9 @@ if (fromUrl) {
   $('code-input').value = fromUrl;
   $('create-block').hidden = true;
   $('invite-note').hidden = false;
-  $('invite-note').textContent = `You\u2019ve been invited to room ${fromUrl}. Enter your name and tap Join.`;
-  syncDefaultName();
+  $('invite-note').textContent = `You’ve been invited to room ${fromUrl}. Enter your name and tap Join.`;
+  prefillNameForRoom(fromUrl); // been here before: the same name as last time
   $('name-input').focus();
 }
+renderCatalog();
 renderRecents();

@@ -1,6 +1,7 @@
 // Real transport: Trystero over free public infrastructure (Nostr relays by
-// default). Peers find each other through the room code; after that the game
-// traffic goes straight browser-to-browser over WebRTC.
+// default). Peers find each other through the room code; after that all traffic
+// (the room's own messages and every game's) goes straight browser-to-browser
+// over WebRTC, on one channel. js/room.js says what is sent on it.
 //
 // To switch discovery network, change the import to e.g.
 //   https://esm.sh/@trystero-p2p/torrent@0.26.0   (BitTorrent trackers)
@@ -8,11 +9,11 @@
 import {joinRoom, selfId} from 'https://esm.sh/trystero@0.26.0';
 
 // Namespaces our rooms so we never meet other Trystero apps.
-const APP_ID = 'saket-p2p-rps-v1';
+const APP_ID = 'saket-p2p-rps-v1'; // unchanged on purpose; the protocol version in hello flags mismatches
 
 export function createTransport(roomId) {
   const room = joinRoom({appId: APP_ID}, roomId);
-  const action = room.makeAction('rps');
+  const action = room.makeAction('room');
 
   const transport = {
     selfId,

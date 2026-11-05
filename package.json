@@ -6,6 +6,7 @@
   "description": "Frontend-only peer-to-peer rock paper scissors (Trystero + GitHub Pages)",
   "scripts": {
     "test": "node --test",
-    "serve": "python3 -m http.server 8000"
+    "serve": "python3 -m http.server 8000",
+    "smoke": "node scripts/smoke.mjs"
   }
 }

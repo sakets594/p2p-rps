@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tube hands preview</title>
   <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="../css/hands-tube.css">
+  <link rel="stylesheet" href="../js/games/rps/hands-tube.css">
   <style>
     body { padding: 16px; }
     .panel { max-width: 640px; margin: 0 auto 16px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -39,8 +39,8 @@
   </div>
 
   <script type="module">
-    import {HandStageTube} from '../js/hands-tube.js';
-    import {resolve} from '../js/game.js';
+    import {HandStageTube} from '../js/games/rps/hands-tube.js';
+    import {resolve} from '../js/games/rps/rules.js';
 
     const $ = (id) => document.getElementById(id);
     const stage = new HandStageTube($('stage'));

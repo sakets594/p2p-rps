@@ -1,0 +1,18 @@
+@import url('./hands-tube.css');
+
+/* Rock Paper Scissors screen. Colors come from the theme variables in css/style.css. */
+
+.rps { display: flex; flex-direction: column; gap: 16px; }
+
+.rps .score { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+.rps .score > div { display: flex; flex-direction: column; min-width: 0; }
+.rps .n { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+
+.rps .status { margin: 0; font-size: 1.3rem; min-height: 2em; }
+
+.rps .moves { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.rps .move { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px; }
+.rps .move .emoji { font-size: 2.2rem; line-height: 1; }
+.rps .move.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); opacity: 1; }
+
+.rps .hands { border-radius: 12px; background: radial-gradient(circle at 50% 35%, var(--bg), var(--card)); }

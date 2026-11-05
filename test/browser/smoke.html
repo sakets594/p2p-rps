@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smoke test: every game, two players, real UI</title>
+<!--
+  Browser smoke test. Mounts each ready game from the registry twice (Alice and Bob) over the in-memory
+  network and drives the real UI: RPS by clicking buttons, Cup Pong by synthetic swipes. Writes a JSON
+  report to #smoke-result. Run it with `npm run smoke` (headless Chrome), or just open the page by hand
+  via `npm run serve` and http://localhost:8000/test/browser/smoke.html.
+-->
+<style>
+  body { margin: 0; font: 13px system-ui, sans-serif; background: #12161c; color: #eee; }
+  .pair { display: flex; gap: 12px; padding: 8px; }
+  .pair > div { width: 460px; max-width: 48%; }
+  #out { padding: 8px; white-space: pre-wrap; font: 12px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<pre id="out">running...</pre>
+<pre id="smoke-result" hidden></pre>
+<script type="module">
+import {GAMES} from '../../js/games.js';
+import {memorySessions} from '../../js/memory-transport.js';
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const results = [];
+const errors = [];
+addEventListener('error', (e) => errors.push(`${e.message} @ ${String(e.error?.stack ?? '').split('\n').slice(1, 3).map((l) => l.trim().replace(/https?:\/\/[^/]+/, '')).join(' <- ')}`));
+addEventListener('unhandledrejection', (e) => errors.push(String(e.reason?.message ?? e.reason)));
+
+const describe = (box) => [...box.querySelectorAll('.cp-ov,.cp-pcard,.cp-msg,.cp-start')].map((e) => `${e.className.replace(/cp-/g, '')}${e.textContent.trim() ? ':' + e.textContent.trim().slice(0, 24) : ''}`).join(' | ');
+async function until(what, fn, ms = 20000, dump) {
+  const t0 = performance.now();
+  for (;;) {
+    const v = fn();
+    if (v) return v;
+    if (performance.now() - t0 > ms) throw new Error(`timed out waiting for: ${what}${dump ? '\n      ' + dump() : ''}`);
+    await wait(50);
+  }
+}
+const assert = (cond, msg) => { if (!cond) throw new Error(`assertion failed: ${msg}`); };
+
+async function test(name, fn) {
+  const t0 = performance.now();
+  const before = errors.length;
+  try {
+    await fn();
+    if (errors.length > before) throw new Error(`page errors: ${errors.slice(before).join(' | ')}`);
+    results.push({name, ok: true, ms: Math.round(performance.now() - t0)});
+  } catch (e) {
+    results.push({name, ok: false, ms: Math.round(performance.now() - t0), error: String(e.message ?? e)});
+  }
+  document.getElementById('out').textContent = results.map((r) => `${r.ok ? 'PASS' : 'FAIL'} ${r.name} ${r.error ?? ''}`).join('\n');
+}
+
+/** Two copies of a game, side by side, over an in-memory network. */
+async function pair(gameId) {
+  const entry = GAMES.find((g) => g.id === gameId);
+  const {sessions} = memorySessions({sid: `smoke-${gameId}`});
+  sessions.forEach((s) => { s.gameId = gameId; s.sent = []; const send = s.send; s.send = (m) => { s.sent.push(m); send(m); }; });
+  const row = document.createElement('div');
+  row.className = 'pair';
+  const boxes = sessions.map(() => row.appendChild(document.createElement('div')));
+  document.getElementById('stage').replaceChildren(row);
+  const mod = await entry.load();
+  const games = [];
+  for (let i = 0; i < 2; i++) games.push(await mod.createGame({session: sessions[i], container: boxes[i]}));
+  return {sessions, boxes, games, destroy: () => games.forEach((g) => g.destroy())};
+}
+
+// ---- every ready game in the registry ------------------------------------------------------------
+for (const g of GAMES.filter((x) => x.status === 'ready')) {
+  await test(`${g.id}: loads, mounts for two players and cleans up on destroy`, async () => {
+    const p = await pair(g.id);
+    await wait(300);
+    assert(p.boxes.every((b) => b.children.length > 0), 'both containers have content');
+    p.destroy();
+    assert(p.boxes.every((b) => b.children.length === 0), 'destroy() empties the containers');
+  });
+}
+
+// ---- Rock Paper Scissors: click through two rounds -----------------------------------------------
+await test('rps: two rounds played by clicking, both screens agree', async () => {
+  const p = await pair('rps');
+  const [a, b] = p.boxes;
+  const click = (box, move) => box.querySelector(`.move[data-move="${move}"]`).click();
+  const status = (box) => box.querySelector('.status').textContent;
+  const score = (box) => ['.score-win', '.score-draw', '.score-lose'].map((s) => box.querySelector(s).textContent).join('/');
+
+  await until('both can pick', () => !a.querySelector('.move').disabled && !b.querySelector('.move').disabled);
+  click(a, 'rock'); click(b, 'scissors');
+  await until('round 1 result on both', () => /win/i.test(status(a)) && /lose/i.test(status(b)), 25000);
+  assert(score(a) === '1/0/0' && score(b) === '0/0/1', `round 1 scores ${score(a)} vs ${score(b)}`);
+
+  a.querySelector('.next').click(); b.querySelector('.next').click();
+  await until('round 2 picks open', () => !a.querySelector('.move').disabled && !b.querySelector('.move').disabled);
+  click(a, 'paper'); click(b, 'paper');
+  await until('round 2 draw on both', () => /draw/i.test(status(a)) && /draw/i.test(status(b)), 25000);
+  assert(score(a) === '1/1/0' && score(b) === '0/1/1', `round 2 scores ${score(a)} vs ${score(b)}`);
+  p.destroy();
+});
+
+// ---- Cup Pong: intro, coin flip, then real swipes both ways --------------------------------------
+await test('cup-pong: intro and coin flip finish, a swipe throws on both screens', async () => {
+  const p = await pair('cup-pong');
+  const [a, b] = p.boxes;
+  const sc = (box, who) => Number(box.querySelector(`[data-sc="${who}"]`).textContent);
+  const used = (box) => box.querySelectorAll('.cp-dots i.used').length;
+  const hidden = (box, sel) => box.querySelector(sel).classList.contains('hidden');
+
+  await until('intro gone on both', () => hidden(a, '.cp-intro') && hidden(b, '.cp-intro') && hidden(a, '.cp-spin') && hidden(b, '.cp-spin'), 30000);
+  await until('someone is the active thrower', () => ['.cp-pcard[data-card="you"].active'].some((q) => a.querySelector(q) || b.querySelector(q)), 30000, () => `A[${describe(a)}]\n      B[${describe(b)}]`);
+  const thrower = a.querySelector('[data-card="you"]').classList.contains('active') ? 0 : 1;
+  const [tbox, rbox] = thrower === 0 ? [a, b] : [b, a];
+  const tsess = p.sessions[thrower];
+
+  // Swipe from several spots under the ball until a throw message goes out (the ball's exact position is the view's business).
+  async function swipe(box, sess) {
+    const canvas = box.querySelector('canvas');
+    const r = canvas.getBoundingClientRect();
+    const sentBefore = sess.sent.filter((m) => m.t === 'throw').length;
+    for (const fy of [0.78, 0.74, 0.82, 0.7, 0.86, 0.66, 0.9]) {
+      const x0 = r.left + r.width / 2, y0 = r.top + r.height * fy, len = r.height * 0.3;
+      const ev = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {pointerId: 1, clientX: x, clientY: y, bubbles: true, isPrimary: true}));
+      ev('pointerdown', x0, y0);
+      for (let k = 1; k <= 6; k++) ev('pointermove', x0, y0 - (len * k) / 6);
+      ev('pointerup', x0, y0 - len);
+      await wait(150);
+      if (sess.sent.filter((m) => m.t === 'throw').length > sentBefore) return true;
+    }
+    return false;
+  }
+
+  await until('thrower can throw', () => tbox.querySelector('[data-card="you"]').classList.contains('active'), 30000);
+  await wait(1800); // "YOUR SHOT!" banner, then the ball appears
+  assert(await swipe(tbox, tsess), 'a swipe produced a throw message');
+  await until('first ball shown as used on both screens', () => used(a) >= 1 && used(b) >= 1, 20000);
+
+  // Let the flight finish, then take the second ball if the turn is still ours.
+  await wait(4500);
+  if (used(tbox) < 2 && tbox.querySelector('[data-card="you"]').classList.contains('active')) {
+    await wait(1500);
+    await swipe(tbox, tsess);
+  }
+  await wait(5000);
+
+  assert(sc(a, 'you') === sc(b, 'rival') && sc(a, 'rival') === sc(b, 'you'), `scores mirrored: A ${sc(a, 'you')}-${sc(a, 'rival')}, B ${sc(b, 'you')}-${sc(b, 'rival')}`);
+  assert(hidden(a, '.cp-notice') && hidden(b, '.cp-notice'), 'no desync / version / away notice');
+  p.destroy();
+});
+
+const failed = results.filter((r) => !r.ok).length;
+const report = {ok: failed === 0, passed: results.length - failed, failed, results};
+document.getElementById('smoke-result').textContent = JSON.stringify(report);
+document.getElementById('out').textContent = (failed ? 'FAILED\n' : 'OK\n') + results.map((r) => `${r.ok ? 'PASS' : 'FAIL'} ${r.name} (${r.ms} ms) ${r.error ?? ''}`).join('\n');
+document.title = failed ? 'SMOKE FAIL' : 'SMOKE OK';
+</script>
+</body>
+</html>

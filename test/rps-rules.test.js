@@ -1,13 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  MOVES,
-  generateRoomCode,
-  makeCommit,
-  normalizeRoomCode,
-  resolve,
-  verifyReveal,
-} from '../js/game.js';
+import {MOVES, makeCommit, resolve, verifyReveal} from '../js/games/rps/rules.js';
 
 test('resolve: all 9 pairings', () => {
   const expected = {
@@ -45,25 +38,4 @@ test('commit hides the move: same move, different nonce, different hash', async 
   const a = await makeCommit({roomId: 'ABC123', round: 1, move: 'rock'});
   const b = await makeCommit({roomId: 'ABC123', round: 1, move: 'rock'});
   assert.notEqual(a.hash, b.hash);
-});
-
-test('generateRoomCode: length and alphabet', () => {
-  for (let i = 0; i < 200; i++) assert.match(generateRoomCode(), /^[0-9A-HJKMNP-TV-Z]{6}$/);
-});
-
-test('generateRoomCode: mixes the clock into the randomness', () => {
-  const zeros = {getRandomValues: (a) => a.fill(0)};
-  const a = generateRoomCode({random: zeros, now: 1_000_000});
-  const b = generateRoomCode({random: zeros, now: 1_000_001});
-  assert.notEqual(a, b);
-  assert.equal(generateRoomCode({random: zeros, now: 1_000_000}), a, 'deterministic given inputs');
-});
-
-test('normalizeRoomCode: forgiving input, strict output', () => {
-  assert.equal(normalizeRoomCode(' k7f-2qx '), 'K7F2QX');
-  assert.equal(normalizeRoomCode('O1LI23'), '011123', 'O->0, I/L->1');
-  assert.equal(normalizeRoomCode('ABC'), null);
-  assert.equal(normalizeRoomCode('ABCDEFG'), null);
-  assert.equal(normalizeRoomCode('ABC!23'), null);
-  assert.equal(normalizeRoomCode(undefined), null);
 });

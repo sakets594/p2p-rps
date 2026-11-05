@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hands preview</title>
   <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="../css/hands.css">
+  <link rel="stylesheet" href="../js/games/rps/hands.css">
   <style>
     body { padding: 16px; }
     .panel { max-width: 560px; margin: 0 auto 16px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -41,8 +41,8 @@
   </div>
 
   <script type="module">
-    import {HandStage} from '../js/hands.js';
-    import {resolve} from '../js/game.js';
+    import {HandStage} from '../js/games/rps/hands.js';
+    import {resolve} from '../js/games/rps/rules.js';
 
     const $ = (id) => document.getElementById(id);
     const stage = new HandStage($('stage'));

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE - Cup Pong, two players on one page</title>
+<!--
+  PROTOTYPE - throwaway test harness. Mounts two copies of the real game (js/games/cup-pong/index.js),
+  wired to each other with the in-memory transport the tests use, so both sides of a match can be
+  played and checked in one browser tab without a network or the room.
+-->
+<style>
+  body { margin: 0; background: #12161c; color: #fff; font-family: system-ui, sans-serif; }
+  h1 { font-size: 13px; margin: 6px 10px; font-weight: 600; opacity: .8; }
+  #row { display: flex; gap: 12px; justify-content: center; padding: 0 8px 8px; flex-wrap: wrap; }
+  .col { width: 460px; max-width: 100%; }
+  .col h2 { font-size: 12px; margin: 0 0 4px; opacity: .7; }
+  #log { font: 11px ui-monospace, monospace; padding: 6px 10px; white-space: pre-wrap; opacity: .8; }
+</style>
+</head>
+<body>
+<h1>PROTOTYPE harness: the real Cup Pong, two players over an in-memory network. Left = Alice (seat 0), right = Bob (seat 1).</h1>
+<div id="row">
+  <div class="col"><h2>Alice</h2><div id="a"></div></div>
+  <div class="col"><h2>Bob</h2><div id="b"></div></div>
+</div>
+<div id="log"></div>
+<script type="module">
+import {memorySessions} from '../js/memory-transport.js';
+import {createGame} from '../js/games/cup-pong/index.js';
+
+const {net, sessions} = memorySessions({players: [{id: 'alice', name: 'Alice'}, {id: 'bob', name: 'Bob'}]});
+window.__net = net; window.__sessions = sessions;
+const ga = await createGame({session: sessions[0], container: document.getElementById('a')});
+const gb = await createGame({session: sessions[1], container: document.getElementById('b')});
+window.__games = [ga, gb];
+document.getElementById('log').textContent = 'mounted';
+</script>
+</body>
+</html>

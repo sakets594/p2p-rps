@@ -1,33 +1,73 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {MAX_NAMES, MAX_ROOMS, createStore, memoryStorage} from '../js/storage.js';
+import {MAX_ROOMS, STORAGE_VERSION, createStore, memoryStorage} from '../js/storage.js';
 
-test('names: most recent first, de-duplicated ignoring case, capped', () => {
-  const store = createStore(memoryStorage());
-  assert.deepEqual(store.names(), []);
-  store.rememberName('Sam');
-  store.rememberName('Priya');
-  store.rememberName('sam');
-  assert.deepEqual(store.names(), ['sam', 'Priya']);
-  for (let i = 0; i < 10; i++) store.rememberName(`Player ${i}`);
-  assert.equal(store.names().length, MAX_NAMES);
-  assert.equal(store.names()[0], 'Player 9');
-});
+const VERSION_KEY = 'p2p-games-storage-version';
+const roomsJson = (codes) => JSON.stringify(codes.map((code, i) => ({code, name: `Room ${code}`, myName: 'Sam', role: 'joiner', at: i})));
 
-test('names: blank and non-string input is ignored, long names are capped', () => {
-  const store = createStore(memoryStorage());
-  store.rememberName('   ');
-  store.rememberName(undefined);
-  store.rememberName({evil: true});
-  assert.deepEqual(store.names(), []);
-  store.rememberName('x'.repeat(50));
-  assert.equal(store.names()[0].length, 16);
-});
-
-test('names: picks up the single name saved by the first version', () => {
+test('a fresh browser is stamped with the current version', () => {
   const storage = memoryStorage();
+  createStore(storage);
+  assert.equal(storage.getItem(VERSION_KEY), String(STORAGE_VERSION));
+});
+
+test('data from before versioning keeps its rooms but loses remembered names', () => {
+  const storage = memoryStorage();
+  storage.setItem('rps-rooms', roomsJson(['AAAAAA']));
+  storage.setItem('rps-names', JSON.stringify(['Sam', 'Priya']));
   storage.setItem('rps-name', 'OldSam');
-  assert.deepEqual(createStore(storage).names(), ['OldSam']);
+  const store = createStore(storage);
+  assert.deepEqual(store.rooms().map((r) => r.code), ['AAAAAA']);
+  assert.equal(store.rooms()[0].myName, 'Sam', 'the name used in that room is still there');
+  assert.equal(storage.getItem('rps-names'), null);
+  assert.equal(storage.getItem('rps-name'), null);
+  assert.equal(storage.getItem(VERSION_KEY), String(STORAGE_VERSION));
+});
+
+test('version 1 is migrated the same way', () => {
+  const storage = memoryStorage();
+  storage.setItem(VERSION_KEY, '1');
+  storage.setItem('rps-rooms', roomsJson(['AAAAAA']));
+  storage.setItem('rps-names', JSON.stringify(['Sam']));
+  createStore(storage);
+  assert.equal(storage.getItem('rps-names'), null);
+  assert.equal(JSON.parse(storage.getItem('rps-rooms')).length, 1);
+});
+
+test('data at the current version is left alone', () => {
+  const storage = memoryStorage();
+  storage.setItem(VERSION_KEY, String(STORAGE_VERSION));
+  storage.setItem('rps-rooms', roomsJson(['AAAAAA', 'BBBBBB']));
+  assert.equal(createStore(storage).rooms().length, 2);
+});
+
+test('data from an unsupported version is deleted, not half-read', () => {
+  for (const version of [String(STORAGE_VERSION + 1), '99', '0', 'abc', '1.5', '', '2 ']) {
+    const storage = memoryStorage();
+    storage.setItem(VERSION_KEY, version);
+    storage.setItem('rps-rooms', roomsJson(['AAAAAA']));
+    storage.setItem('rps-names', JSON.stringify(['Sam']));
+    storage.setItem('rps-name', 'OldSam');
+    const store = createStore(storage);
+    assert.deepEqual(store.rooms(), [], `version ${JSON.stringify(version)}`);
+    assert.equal(storage.getItem('rps-names'), null);
+    assert.equal(storage.getItem('rps-name'), null);
+    assert.equal(storage.getItem(VERSION_KEY), String(STORAGE_VERSION), 'stamped so it is not wiped again next time');
+  }
+});
+
+test('other keys in the same localStorage are never touched', () => {
+  const storage = memoryStorage();
+  storage.setItem(VERSION_KEY, '99');
+  storage.setItem('someone-elses-key', 'keep me');
+  createStore(storage);
+  assert.equal(storage.getItem('someone-elses-key'), 'keep me');
+});
+
+test('the store has no memory of names across rooms', () => {
+  const store = createStore(memoryStorage());
+  assert.equal(store.names, undefined);
+  assert.equal(store.rememberName, undefined);
 });
 
 test('rooms: remembered with code, room name, my name and role', () => {
@@ -77,13 +117,11 @@ test('rooms: invalid codes are never stored', () => {
 
 test('corrupt or hostile stored data is tolerated and sanitized', () => {
   const storage = memoryStorage();
-  storage.setItem('rps-names', '{not json');
   storage.setItem('rps-rooms', JSON.stringify([
     null, 'x', {code: 'bad'}, {code: 'ABCDEF', name: '<b>hi</b>\u0000', myName: 5, role: 'admin', at: 'soon'},
     {code: 'abcdef', name: 'duplicate'},
   ]));
   const store = createStore(storage);
-  assert.deepEqual(store.names(), []);
   const rooms = store.rooms();
   assert.equal(rooms.length, 1);
   assert.equal(rooms[0].role, 'joiner');
@@ -98,8 +136,6 @@ test('storage that throws never breaks the store', () => {
     setItem() { throw new Error('quota'); },
   };
   const store = createStore(broken);
-  assert.deepEqual(store.names(), []);
-  store.rememberName('Sam');
   store.rememberRoom({code: 'AAAAAA'});
   assert.deepEqual(store.rooms(), []);
 });

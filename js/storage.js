@@ -1,16 +1,23 @@
-// Remembers the names and rooms a player has used, in localStorage.
+// Remembers the rooms a player has used (and the name they used in each), in
+// localStorage. A name belongs to a room: nothing remembers "your name" across
+// rooms or visits.
+//
 // Everything read back is re-validated, so corrupt or hand-edited data can
 // never break the page, and a blocked/unavailable localStorage degrades to
-// "nothing is remembered" instead of throwing.
+// "nothing is remembered" instead of throwing. The data carries a version; on
+// load, data from a version this code does not understand is deleted rather than
+// half-read (see migrate).
 
-import {normalizeRoomCode} from './game.js';
-import {cleanName, MAX_ROOM_NAME_LENGTH} from './match.js';
+import {normalizeRoomCode} from './room-code.js';
+import {cleanName, MAX_ROOM_NAME_LENGTH} from './names.js';
 
-const NAMES_KEY = 'rps-names';
 const ROOMS_KEY = 'rps-rooms';
-const LEGACY_NAME_KEY = 'rps-name'; // single saved name from the first version
+const VERSION_KEY = 'p2p-games-storage-version';
+// Keys this app has ever used. Old names lists are listed so they get cleaned up.
+const OLD_NAME_KEYS = ['rps-names', 'rps-name'];
 
-export const MAX_NAMES = 6;
+/** Bump when the saved format changes, and teach migrate() what to do with the old one. */
+export const STORAGE_VERSION = 2;
 export const MAX_ROOMS = 6;
 
 export function memoryStorage() {
@@ -30,7 +37,35 @@ function browserStorage() {
   }
 }
 
+/**
+ * Bring saved data to STORAGE_VERSION, or delete it if it cannot be understood.
+ *   current version  nothing to do
+ *   none, or 1       data from before versioning: the room list is still valid, but
+ *                    remembered names are gone (a name belongs to a room now), so drop them
+ *   anything else    a newer app wrote it, or it is garbled: unsupported, delete it all
+ */
+export function migrate(storage) {
+  const remove = (key) => { try { storage.removeItem(key); } catch { /* nothing to clean */ } };
+  let stored;
+  try {
+    stored = storage.getItem(VERSION_KEY);
+  } catch {
+    return; // storage is unusable; the store will simply remember nothing
+  }
+  if (stored === String(STORAGE_VERSION)) return;
+
+  if (stored === null || stored === '1') {
+    OLD_NAME_KEYS.forEach(remove);
+  } else {
+    [ROOMS_KEY, ...OLD_NAME_KEYS].forEach(remove);
+  }
+  try {
+    storage.setItem(VERSION_KEY, String(STORAGE_VERSION));
+  } catch { /* quota or private mode */ }
+}
+
 export function createStore(storage = browserStorage()) {
+  migrate(storage);
   const read = (key) => {
     try {
       const value = JSON.parse(storage.getItem(key));
@@ -46,28 +81,6 @@ export function createStore(storage = browserStorage()) {
       /* quota or private mode: remembering is a convenience, not a requirement */
     }
   };
-
-  const sameName = (a, b) => a.toLowerCase() === b.toLowerCase();
-
-  /** Recent names, most recent first. */
-  function names() {
-    const out = [];
-    const raw = read(NAMES_KEY);
-    if (raw.length === 0) {
-      try { raw.push(storage.getItem(LEGACY_NAME_KEY)); } catch { /* ignore */ }
-    }
-    for (const item of raw) {
-      const name = cleanName(item, '');
-      if (name && !out.some((n) => sameName(n, name))) out.push(name);
-    }
-    return out.slice(0, MAX_NAMES);
-  }
-
-  function rememberName(raw) {
-    const name = cleanName(raw, '');
-    if (!name) return;
-    write(NAMES_KEY, [name, ...names().filter((n) => !sameName(n, name))].slice(0, MAX_NAMES));
-  }
 
   /** Recent rooms, most recently played first. */
   function rooms() {
@@ -117,5 +130,5 @@ export function createStore(storage = browserStorage()) {
     write(ROOMS_KEY, rooms().filter((r) => r.code !== normalizeRoomCode(code)));
   }
 
-  return {names, rememberName, rooms, rememberRoom, updateRoomName, forgetRoom};
+  return {rooms, rememberRoom, updateRoomName, forgetRoom};
 }
