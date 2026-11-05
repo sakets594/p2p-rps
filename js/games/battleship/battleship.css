@@ -1,0 +1,20 @@
+/* Battleship screen. Colors come from css/style.css. */
+
+.bs { display: flex; flex-direction: column; gap: 12px; }
+.bs h3 { margin: 0 0 4px; font-size: .95rem; color: var(--muted); font-weight: 600; }
+.bs-status { margin: 0; text-align: center; font-size: 1.2rem; min-height: 1.8em; }
+.bs-status.win { color: var(--good); } .bs-status.lose { color: var(--bad); }
+.bs-actions { display: flex; gap: 10px; } .bs-actions > * { flex: 1; }
+.bs-error { color: var(--bad); text-align: center; margin: 0; }
+
+.bs-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; padding: 4px; border-radius: 10px; background: #1b6aa5; }
+.bs-grid.small { max-width: 260px; }
+.bs-cell { aspect-ratio: 1; padding: 0; border: 0; border-radius: 3px; background: rgba(255, 255, 255, .16); position: relative; font-size: .8rem; line-height: 1; }
+.bs-cell:disabled { opacity: 1; cursor: default; }
+button.bs-cell:hover:not(:disabled) { background: rgba(255, 255, 255, .4); border: 0; }
+.bs-cell.ship { background: #dfe5ee; }
+.bs-cell.miss::after { content: ""; position: absolute; inset: 35%; border-radius: 50%; background: #fff; opacity: .85; }
+.bs-cell.hit { background: var(--bad); }
+.bs-cell.hit::after { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 700; }
+.bs-cell.pending { background: #f5c542; }
+.bs-cell.unhit { background: #dfe5ee; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5); }

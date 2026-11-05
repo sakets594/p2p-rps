@@ -1,0 +1,24 @@
+/* Hangman screen. Colors come from css/style.css. */
+
+.hm { display: flex; flex-direction: column; gap: 12px; }
+.hm-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.hm-status { margin: 0; text-align: center; font-size: 1.15rem; min-height: 1.8em; }
+.hm-status.win { color: var(--good); } .hm-status.lose { color: var(--bad); }
+.hm-error { color: var(--bad); text-align: center; margin: 0; }
+
+.hm-gallows { width: 150px; height: 150px; margin: 0 auto; display: block; }
+.hm-gallows * { stroke: var(--fg); stroke-width: 4; stroke-linecap: round; fill: none; }
+.hm-gallows .part { display: none; stroke: var(--bad); }
+.hm-gallows .part.on { display: inline; }
+
+.hm-word { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; }
+.hm-letter { width: 1.6em; height: 2em; border-bottom: 3px solid var(--fg); text-align: center; font-size: 1.6rem; font-weight: 700; line-height: 2em; text-transform: uppercase; }
+.hm-letter.unknown { color: var(--muted); opacity: .6; }
+
+.hm-pick { display: flex; gap: 8px; }
+.hm-pick input { flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+
+.hm-keys { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.hm-keys button { padding: 8px 0; font-weight: 700; text-transform: uppercase; }
+.hm-keys button.right { background: color-mix(in srgb, var(--good) 25%, var(--card)); border-color: var(--good); }
+.hm-keys button.wrong { background: color-mix(in srgb, var(--bad) 22%, var(--card)); border-color: var(--bad); }

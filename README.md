@@ -1,7 +1,8 @@
 # P2P Games
 
-Frontend-only multiplayer games. No game server, no backend, no cost. Rock Paper Scissors is the
-first game; the rest of the catalog is placeholders marked "Soon".
+Frontend-only multiplayer games. No game server, no backend, no cost. Nine two-player games:
+Rock Paper Scissors, Cup Pong, Tic-Tac-Toe, Connect Four, Dots and Boxes, Memory Match, Battleship,
+Hangman and Trivia Duel. A catalog entry with `status: 'soon'` shows as a "Soon" placeholder.
 
 - **Hosting:** static files on GitHub Pages (free, HTTPS, which WebRTC needs).
 - **Connecting:** [Trystero](https://github.com/dmotz/trystero) uses free public Nostr relays only to
@@ -65,6 +66,16 @@ mismatch shows "ask your friend to refresh" instead of a silent hang.
 
 ## Features
 
+- Turn-based games (`js/games/turn-match.js`): Tic-Tac-Toe, Connect Four, Dots and Boxes and Memory Match share one engine.
+  Both browsers apply the same pure `rules.js` to the same moves, so only moves travel; illegal or out-of-turn moves are rejected.
+  Who goes first and Memory Match's card layout come from the session id (`js/rng.js`), so both sides agree with nothing sent.
+- Hidden-information games use commit-reveal, like RPS. Battleship: fleets are locked in by hash, the other side answers every shot
+  from its own fleet, and at the end both fleets are revealed and checked against every answer (a lie shows as "may have cheated").
+  Hangman: two rounds with roles swapped, the word is locked in by hash and each answer is checked at the reveal.
+- Trivia Duel: 8 questions from `js/games/trivia-duel/questions.js` (add more there), picked and option-shuffled from the session id.
+  1 point for a right answer, +1 for the faster right answer. Each browser times itself, so this is for friends.
+  Memory Match, Trivia and the commit-reveal games are not cheat-proof against someone reading the page source or console.
+
 - Cup Pong (`js/games/cup-pong/`): swipe to throw a ball at the other player's 10 cups, 5 rounds of 2 balls, one table bounce allowed,
   both balls in earns an extra turn, clearing every cup wins at once. Only the throw inputs travel; both sides replay them with the same
   deterministic physics (`physics.js`) and a mismatch is reported as a desync. A forgiveness helper (`aim-assist.js`) nudges near-misses.
@@ -96,7 +107,7 @@ and pick a game.
 npm test             # Node's built-in runner, no dependencies to install
 ```
 
-Covers the room protocol (proposals, simultaneous proposals, stale-session messages, leaving, reconnect
+Covers the room protocol, the turn-based rules and engine, Battleship, Hangman and Trivia (including cheating attempts), (proposals, simultaneous proposals, stale-session messages, leaving, reconnect
 grace period, version mismatch, malformed input), Rock Paper Scissors rules and commit-reveal (including
 tampering), full two-player matches over an in-memory transport, Cup Pong's physics, aim helper and match
 (replay, desync, resume), room codes, names and storage.

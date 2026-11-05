@@ -66,8 +66,9 @@ const mainText = await read(`document.body.innerText.slice(0, 200)`);
 const mainOk = pageErrors.length === 0 && /room/i.test(mainText ?? '');
 console.log(`${mainOk ? 'PASS' : 'FAIL'}  main page loads and shows the room screen${pageErrors.length ? `\n      ${pageErrors.join(' | ')}` : ''}`);
 const registry = await read(`fetch('js/games.js?nocache=${Date.now()}', {cache: 'reload'}).then((r) => r.text())`);
-const regOk = /id:\s*'cup-pong'/.test(registry ?? '') && /id:\s*'rps'/.test(registry ?? '');
-console.log(`${regOk ? 'PASS' : 'FAIL'}  the served game list has rps and cup-pong`);
+const READY_IDS = ['rps', 'cup-pong', 'tic-tac-toe', 'connect-four', 'dots-and-boxes', 'memory-match', 'battleship', 'hangman', 'trivia-duel'];
+const regOk = READY_IDS.every((id) => new RegExp(`id:\\s*'${id}'`).test(registry ?? ''));
+console.log(`${regOk ? 'PASS' : 'FAIL'}  the served game list has all ${READY_IDS.length} games`);
 await cdp('Page.navigate', {url});
 let json = null;
 for (const t0 = Date.now(); Date.now() - t0 < 150_000 && !json;) {

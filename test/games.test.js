@@ -44,7 +44,10 @@ test('filterGames: no filter returns everything, playable games first', () => {
   const all = filterGames();
   assert.equal(all.length, GAMES.length);
   const firstSoon = all.findIndex((g) => g.status === 'soon');
-  assert.ok(all.slice(firstSoon).every((g) => g.status === 'soon'));
+  if (firstSoon >= 0) assert.ok(all.slice(firstSoon).every((g) => g.status === 'soon'));
+  // Upcoming games sort after playable ones, whichever way round the catalog lists them.
+  const mixed = [{id: 'a', title: 'a', blurb: '', tags: [], status: 'soon'}, {id: 'b', title: 'b', blurb: '', tags: [], status: 'ready'}];
+  assert.deepEqual(filterGames({}, mixed).map((g) => g.id), ['b', 'a']);
 });
 
 test('filterGames: search matches title, blurb and tags, ignoring case', () => {

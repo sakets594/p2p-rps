@@ -1,0 +1,17 @@
+/* Trivia Duel screen. Colors come from css/style.css. */
+
+.tv { display: flex; flex-direction: column; gap: 14px; }
+.tv-top { display: flex; justify-content: space-between; align-items: baseline; }
+.tv-bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.tv-bar > i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left; }
+.tv-q { margin: 0; font-size: 1.25rem; min-height: 3.2em; }
+.tv-opts { display: grid; gap: 8px; }
+.tv-opt { text-align: left; padding: 12px 14px; border-width: 2px; }
+.tv-opt.mine { border-color: var(--me); }
+.tv-opt.theirs { box-shadow: inset 0 0 0 2px var(--them); }
+.tv-opt.right { background: color-mix(in srgb, var(--good) 25%, var(--card)); border-color: var(--good); }
+.tv-opt.wrong.mine { background: color-mix(in srgb, var(--bad) 20%, var(--card)); border-color: var(--bad); }
+.tv-opt:disabled { opacity: 1; cursor: default; }
+.tv-opt .tv-tag { float: right; font-size: .8rem; color: var(--muted); }
+.tv-note { margin: 0; text-align: center; min-height: 1.6em; }
+.tv-note.win { color: var(--good); } .tv-note.lose { color: var(--bad); }

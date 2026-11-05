@@ -152,6 +152,116 @@ await test('cup-pong: intro and coin flip finish, a swipe throws on both screens
   p.destroy();
 });
 
+// ---- The turn-based and hidden-information games: click through real play --------------------------
+const press = (el) => el.dispatchEvent(new MouseEvent('click', {bubbles: true})); // also works on SVG elements
+const text = (box, sel) => box.querySelector(sel)?.textContent ?? '';
+const both = (p, fn) => p.boxes.every(fn);
+
+/** Whoever's screen has an enabled control matching `sel` is to move; click the first one. Returns false if nobody can move. */
+function moveFirst(boxes, sel) {
+  for (const box of boxes) {
+    const el = [...box.querySelectorAll(sel)].find((e) => !e.disabled && !e.classList.contains('off'));
+    if (el) { press(el); return true; }
+  }
+  return false;
+}
+
+async function playOut(p, sel, doneRe, statusSel = '.tg-status') {
+  for (let i = 0; i < 200 && !both(p, (b) => doneRe.test(text(b, statusSel))); i++) {
+    moveFirst(p.boxes, sel);
+    await wait(40);
+  }
+  await until('game over shown on both', () => both(p, (b) => doneRe.test(text(b, statusSel))), 8000);
+}
+
+await test('tic-tac-toe: played to the end by clicking, both screens agree on the result', async () => {
+  const p = await pair('tic-tac-toe');
+  await playOut(p, '.ttt-cell', /win|draw/i);
+  const [a, b] = p.boxes;
+  const won = (box) => /^You win/.test(text(box, '.tg-status'));
+  assert(won(a) !== won(b) || /draw/i.test(text(a, '.tg-status')), 'one winner or a draw');
+  assert(a.querySelectorAll('.ttt-cell.line').length === 3 || /draw/i.test(text(a, '.tg-status')), 'winning line highlighted');
+  assert([...a.querySelectorAll('.ttt-cell')].map((c) => c.textContent).join('') === [...b.querySelectorAll('.ttt-cell')].map((c) => c.textContent).join(''), 'same board');
+  p.destroy();
+});
+
+await test('connect-four: discs drop and a four is found, same board on both screens', async () => {
+  const p = await pair('connect-four');
+  await playOut(p, '.c4-col', /win|draw/i);
+  const [a, b] = p.boxes;
+  const board = (box) => [...box.querySelectorAll('.c4-disc')].map((d) => (d.classList.contains('p-mine') ? 'm' : d.classList.contains('p-theirs') ? 't' : '.')).join('');
+  assert(board(a).replace(/[mt]/g, (c) => (c === 'm' ? 't' : 'm')) === board(b), 'boards mirror (mine on one is theirs on the other)');
+  assert(a.querySelectorAll('.c4-disc.line').length === 4 || /draw/i.test(text(a, '.tg-status')), 'four highlighted');
+  p.destroy();
+});
+
+await test('dots-and-boxes: every line drawn, boxes claimed, one result on both screens', async () => {
+  const p = await pair('dots-and-boxes');
+  await playOut(p, '.db-hit', /win|draw/i);
+  const [a, b] = p.boxes;
+  assert(a.querySelectorAll('.db-box.mine, .db-box.theirs').length === 25, 'all 25 boxes claimed');
+  assert(text(a, '.tg-score-me') === text(b, '.tg-score-them') && text(a, '.tg-score-them') === text(b, '.tg-score-me'), 'scores mirrored');
+  p.destroy();
+});
+
+await test('memory-match: flips show on both screens and a miss hides again', async () => {
+  const p = await pair('memory-match');
+  const [a, b] = p.boxes;
+  await until('someone can flip', () => moveFirst(p.boxes, '.mm-card'));
+  await wait(60);
+  // flip the second card for whoever is to move
+  await until('second flip', () => moveFirst(p.boxes, '.mm-card'));
+  await until('both screens show the same two cards face up', () => a.querySelectorAll('.mm-card.up').length === 2 && b.querySelectorAll('.mm-card.up').length === 2 || a.querySelectorAll('.mm-card.mine,.mm-card.theirs').length === 2, 5000);
+  const faces = (box) => [...box.querySelectorAll('.mm-card')].map((c) => c.textContent).join('|');
+  assert(faces(a) === faces(b), 'same faces');
+  await until('a miss flips back after a moment', () => a.querySelectorAll('.mm-card.up').length === 0 || a.querySelectorAll('.mm-card.mine,.mm-card.theirs').length === 2, 5000);
+  p.destroy();
+});
+
+await test('battleship: lock in fleets, fire, and the other screen shows the shot', async () => {
+  const p = await pair('battleship');
+  const [a, b] = p.boxes;
+  for (const box of p.boxes) press(box.querySelector('.bs-ready'));
+  await until('battle begins on both', () => both(p, (x) => !x.querySelector('.bs-enemy-wrap').hidden), 8000);
+  const shooter = await until('someone can fire', () => p.boxes.find((x) => [...x.querySelectorAll('.bs-enemy .bs-cell')].some((c) => !c.disabled)));
+  press(shooter.querySelector('.bs-enemy .bs-cell[data-cell="0,0"]'));
+  const target = shooter === a ? b : a;
+  await until('the shot lands on the other board', () => target.querySelectorAll('.bs-mine .hit, .bs-mine .miss').length === 1, 5000);
+  await until('the shooter sees hit or miss', () => shooter.querySelectorAll('.bs-enemy .hit, .bs-enemy .miss').length === 1, 5000);
+  await until('the turn passes', () => [...target.querySelectorAll('.bs-enemy .bs-cell')].some((c) => !c.disabled), 5000);
+  p.destroy();
+});
+
+await test('hangman: the setter picks a word, the guesser finds it, both see the round end', async () => {
+  const p = await pair('hangman');
+  const setter = await until('a setter form is shown', () => p.boxes.find((x) => !x.querySelector('.hm-pick').hidden));
+  const guesser = p.boxes.find((x) => x !== setter);
+  setter.querySelector('.hm-input').value = 'Cat';
+  setter.querySelector('.hm-pick').dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}));
+  await until('guesser keyboard opens', () => !guesser.querySelector('.hm-keys').hidden && !guesser.querySelector('.hm-keys button').disabled, 5000);
+  assert(guesser.querySelectorAll('.hm-letter').length === 3, 'three blanks');
+  for (const l of ['c', 'z', 'a', 't']) {
+    await until(`key ${l} ready`, () => !guesser.querySelector(`[data-key="${l}"]`).disabled, 5000);
+    press(guesser.querySelector(`[data-key="${l}"]`));
+  }
+  await until('round over on both', () => /found/i.test(text(guesser, '.hm-status')) && /found/i.test(text(setter, '.hm-status')), 5000);
+  assert([...guesser.querySelectorAll('.hm-letter')].map((e) => e.textContent).join('') === 'cat', 'word shown');
+  assert(guesser.querySelectorAll('.hm-gallows .part.on').length === 1, 'one wrong letter drawn');
+  p.destroy();
+});
+
+await test('trivia-duel: both answer, the result is revealed with the right option marked', async () => {
+  const p = await pair('trivia-duel');
+  const [a, b] = p.boxes;
+  assert(text(a, '.tv-q') === text(b, '.tv-q') && text(a, '.tv-q').length > 5, 'same question on both');
+  press(a.querySelector('.tv-opt[data-opt="0"]'));
+  await until('friend answered is shown', () => /answered|Locked/.test(text(b, '.tv-note') + text(a, '.tv-note')), 5000);
+  press(b.querySelector('.tv-opt[data-opt="1"]'));
+  await until('reveal on both', () => both(p, (x) => x.querySelector('.tv-opt.right')), 5000);
+  await until('next question after the pause', () => both(p, (x) => /Question 2 of/.test(text(x, '.tv-count'))), 8000);
+  p.destroy();
+});
+
 const failed = results.filter((r) => !r.ok).length;
 const report = {ok: failed === 0, passed: results.length - failed, failed, results};
 document.getElementById('smoke-result').textContent = JSON.stringify(report);

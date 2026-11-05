@@ -1,0 +1,56 @@
+/* Shared look for the board games (Tic-Tac-Toe, Connect Four, Dots and Boxes, Memory Match) and the
+   score header other word/quiz games reuse. Colors come from css/style.css: --me, --them, --accent. */
+
+.tg { display: flex; flex-direction: column; gap: 14px; }
+.tg-head { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tg-p { display: flex; flex-direction: column; align-items: center; padding: 8px 6px; border: 2px solid var(--line); border-radius: 12px; min-width: 0; }
+.tg-p b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tg-p .tg-score { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.tg-p.me { color: var(--me); } .tg-p.them { color: var(--them); }
+.tg-p.active { border-color: currentColor; box-shadow: 0 0 0 2px currentColor; }
+.tg-status { margin: 0; text-align: center; font-size: 1.2rem; min-height: 1.8em; }
+.tg-status.win { color: var(--good); } .tg-status.lose { color: var(--bad); }
+.tg-error { color: var(--bad); text-align: center; margin: 0; }
+
+/* Tic-Tac-Toe */
+.ttt-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ttt-cell { aspect-ratio: 1; font-size: 3rem; font-weight: 700; padding: 0; line-height: 1; }
+.ttt-cell.p-mine { color: var(--me); } .ttt-cell.p-theirs { color: var(--them); }
+.ttt-cell.line { background: color-mix(in srgb, var(--good) 25%, var(--card)); border-color: var(--good); }
+.ttt-cell:disabled { opacity: 1; cursor: default; }
+.ttt-cell.canplay:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+
+/* Connect Four */
+.c4-board { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 8px; border-radius: 14px; background: #2b4acb; }
+.c4-col { display: flex; flex-direction: column; gap: 4px; padding: 0; background: transparent; border: 0; border-radius: 10px; }
+.c4-col:hover:not(:disabled) { background: rgba(255, 255, 255, .15); border: 0; }
+.c4-col:disabled { opacity: 1; cursor: default; }
+.c4-disc { aspect-ratio: 1; border-radius: 50%; background: var(--bg); box-shadow: inset 0 2px 4px rgba(0, 0, 0, .35); }
+.c4-disc.p-mine { background: var(--me); } .c4-disc.p-theirs { background: var(--them); }
+.c4-disc.p-mine, .c4-disc.p-theirs { box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .3); }
+.c4-disc.line { outline: 3px solid #fff; }
+.c4-disc.last { animation: c4drop .35s ease-out; }
+@keyframes c4drop { from { transform: translateY(-260%); } to { transform: none; } }
+
+/* Dots and Boxes */
+.db-svg { width: 100%; height: auto; touch-action: manipulation; display: block; }
+.db-dot { fill: var(--fg); }
+.db-line { stroke: var(--line); stroke-width: 5; stroke-linecap: round; }
+.db-hit { stroke: transparent; stroke-width: 26; stroke-linecap: round; cursor: pointer; }
+.db-hit.off { cursor: default; pointer-events: none; }
+.db-line.mine { stroke: var(--me); } .db-line.theirs { stroke: var(--them); }
+.db-line.fresh { stroke-width: 7; }
+.db-hit:hover + .db-line:not(.mine):not(.theirs) { stroke: var(--accent); }
+.db-box.mine { fill: color-mix(in srgb, var(--me) 28%, transparent); }
+.db-box.theirs { fill: color-mix(in srgb, var(--them) 28%, transparent); }
+.db-initial { font-size: 22px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.db-initial.mine { fill: var(--me); } .db-initial.theirs { fill: var(--them); }
+
+/* Memory Match */
+.mm-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.mm-card { aspect-ratio: 3 / 4; padding: 0; font-size: 2rem; line-height: 1; border-width: 2px; background: var(--accent); color: var(--accent-fg); }
+.mm-card.up { background: var(--card); color: var(--fg); border-color: var(--accent); }
+.mm-card.mine { background: color-mix(in srgb, var(--me) 22%, var(--card)); border-color: var(--me); color: var(--fg); }
+.mm-card.theirs { background: color-mix(in srgb, var(--them) 22%, var(--card)); border-color: var(--them); color: var(--fg); }
+.mm-card:disabled { opacity: 1; cursor: default; }
+.mm-card.mine:disabled, .mm-card.theirs:disabled { opacity: .85; }

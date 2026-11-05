@@ -46,7 +46,8 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 2,
     blurb: 'Three in a row. The warm-up everyone knows.',
-    status: 'soon',
+    status: 'ready',
+    load: () => import('./games/tic-tac-toe/index.js'),
   },
   {
     id: 'connect-four',
@@ -56,7 +57,8 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 2,
     blurb: 'Drop discs, line up four before your friend does.',
-    status: 'soon',
+    status: 'ready',
+    load: () => import('./games/connect-four/index.js'),
   },
   {
     id: 'battleship',
@@ -66,7 +68,8 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 2,
     blurb: 'Hide your fleet, guess theirs.',
-    status: 'soon',
+    status: 'ready',
+    load: () => import('./games/battleship/index.js'),
   },
   {
     id: 'memory-match',
@@ -76,7 +79,8 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 2,
     blurb: 'Flip cards, find pairs, remember where they were.',
-    status: 'soon',
+    status: 'ready',
+    load: () => import('./games/memory-match/index.js'),
   },
   {
     id: 'dots-and-boxes',
@@ -86,7 +90,8 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 2,
     blurb: 'Close the boxes, steal the chains.',
-    status: 'soon',
+    status: 'ready',
+    load: () => import('./games/dots-and-boxes/index.js'),
   },
   {
     id: 'hangman',
@@ -96,7 +101,8 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 2,
     blurb: 'One picks a word, the other guesses letters.',
-    status: 'soon',
+    status: 'ready',
+    load: () => import('./games/hangman/index.js'),
   },
   {
     id: 'trivia-duel',
@@ -106,7 +112,8 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 2,
     blurb: 'Same questions, fastest right answer wins.',
-    status: 'soon',
+    status: 'ready',
+    load: () => import('./games/trivia-duel/index.js'),
   },
 ];
 

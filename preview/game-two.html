@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE - any game, two players on one page</title>
+<!-- Throwaway harness: mounts two copies of a game from the registry over the in-memory network.
+     Open /preview/game-two.html?game=battleship (any id from js/games.js). -->
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  #row { display: flex; gap: 12px; justify-content: center; padding: 8px; flex-wrap: wrap; }
+  .col { width: 420px; max-width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+  .col h2 { font-size: 12px; margin: 0 0 6px; min-height: 0; opacity: .7; }
+</style>
+</head>
+<body>
+<div id="row"><div class="col"><h2>Alice</h2><div id="a"></div></div><div class="col"><h2>Bob</h2><div id="b"></div></div></div>
+<script type="module">
+import {findGame} from '../js/games.js';
+import {memorySessions} from '../js/memory-transport.js';
+const id = new URLSearchParams(location.search).get('game') ?? 'tic-tac-toe';
+const {sessions} = memorySessions({sid: `preview-${id}`, players: [{id: 'alice', name: 'Alice'}, {id: 'bob', name: 'Bob'}]});
+sessions.forEach((s) => { s.gameId = id; });
+const mod = await findGame(id).load();
+window.__games = [await mod.createGame({session: sessions[0], container: document.getElementById('a')}),
+  await mod.createGame({session: sessions[1], container: document.getElementById('b')})];
+</script>
+</body>
+</html>
