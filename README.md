@@ -32,6 +32,9 @@ The room is two players for now; a third person who joins is ignored.
 | `js/games/<id>/` | One folder per game, loaded only when a game starts. |
 | `js/main.js` | The two screens, the picker, and mounting whichever game is running. |
 | `js/storage.js` | Recent names and rooms in `localStorage`. |
+| `js/sound-map.js` | Which meme clips can play for which moment (one scenario, many clips, one picked at random). |
+| `js/sound.js` | Plays them: one clip at a time, mute, loads on first tap. |
+| `js/sound-events.js` | Turns room changes and Cup Pong throws into scenario ids. |
 
 Messages on the wire are `{t: kind, ...}`: `hello`, `propose`, `accept`, `decline`, `cancel`, `end`, and
 `game` (which carries a game's own message, stamped with a session id so a late message from a game you
@@ -107,6 +110,9 @@ registry twice over the in-memory network and plays through the real UI: Rock Pa
 rounds, Cup Pong through the intro and coin flip and a real swipe. It also fails on any uncaught page error.
 After every deploy, run it against the live site: `SMOKE_BASE=https://<user>.github.io/<repo>/ npm run smoke` (it also checks the main page loads
 and that the served game list has both games).
+`npm run live` goes further: two Chrome pages act as two real peers on the deployed site, find each other through the public relays,
+join one room and play RPS and Cup Pong over real WebRTC (`node scripts/live-p2p.mjs <url>` for another site). It runs on one machine,
+so it does not prove two different networks.
 You can open the same page by hand at `/test/browser/smoke.html` after `npm run serve`.
 The real network path is checked by hand: two tabs locally, then two devices on different networks.
 
@@ -137,3 +143,21 @@ Every later `git push` to `main` redeploys automatically.
 A room of more than two people (with a computed leader), a "room is full" screen, audio and video calls,
 chat, a room-wide scoreboard, and de-duplicating identical display names (two players can still draw the
 same random name, about a 1 in 25 chance).
+
+## Sound
+
+Moments in the game play short Hindi meme clips (a few wordless English ones, no English music).
+The mapping is `SCENARIOS` in `js/sound-map.js`: add or remove a clip name there and run
+
+```bash
+npm run sfx
+```
+
+to copy the clips from the meme-music library (`SFX_LIBRARY=...` if it is not at the default path) into
+`assets/sfx/`. `HELD_BACK` in that file lists clips left out on purpose. Players mute with the Sound
+button in the room header; the choice is remembered. Browsers keep audio off until the first tap, so
+the first tap anywhere on the page turns it on.
+
+A game plays its own moments by calling `play('<scenario id>')` from `js/sound.js`. A game that plays
+its win/lose/draw sound after its animation sets `ownsResultSound: true` in `js/games.js`; otherwise the
+room plays it the moment the game reports a result.

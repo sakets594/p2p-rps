@@ -7,6 +7,8 @@
   "scripts": {
     "test": "node --test",
     "serve": "python3 -m http.server 8000",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "sfx": "node scripts/sync-sfx.mjs",
+    "live": "node scripts/live-p2p.mjs"
   }
 }
