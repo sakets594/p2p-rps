@@ -10,10 +10,12 @@ function setup() {
   return {net, ta, tb, a, b, sa, sb};
 }
 
+// Commit-reveal hashes asynchronously, so wait for the round to resolve instead of a fixed pause
+// (a fixed 20 ms flaked when the machine was busy running other test files).
 const play = async (a, b, ma, mb) => {
   a.pick(ma);
   b.pick(mb);
-  await settle();
+  for (let i = 0; i < 100 && !(a.snapshot().phase === 'result' && b.snapshot().phase === 'result'); i++) await settle(10);
 };
 
 test('a match starts at choosing and knows the opponent by name', () => {

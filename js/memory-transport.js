@@ -80,5 +80,5 @@ export function memorySessions({
   return {net, sessions, transports};
 }
 
-/** Let queued microtasks and async crypto settle. */
-export const settle = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Let queued microtasks and async crypto settle. 50 ms, because hashing runs on a thread pool and 20 ms flaked when test files ran in parallel. */
+export const settle = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms));
