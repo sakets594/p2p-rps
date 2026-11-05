@@ -2,8 +2,10 @@
 // Mounted into a container the room provides; destroy() leaves it empty.
 
 import {HandStageTube} from './hands-tube.js';
+import {play} from '../../sound.js';
 
 const REVEAL_FAILSAFE_MS = 5_000;
+const NUDGE_MS = 5_000; // friend locked in and I am still thinking: time for a "jaldi bol"
 
 const TEMPLATE = `
 <div class="rps">
@@ -29,6 +31,7 @@ const STATUS = {
   revealing: 'Revealing…',
 };
 const OUTCOME = {win: ['You win! 🎉', 'win'], lose: ['You lose 😬', 'lose'], draw: ['It’s a draw', '']};
+const ROUND_SOUND = {win: 'rps.round_won', lose: 'rps.round_lost', draw: 'rps.round_draw'};
 
 /** @returns {{update(snapshot), destroy()}} */
 export function mountRpsView({container, match, myName}) {
@@ -60,8 +63,14 @@ export function mountRpsView({container, match, myName}) {
     const a = anim;
 
     if (s.phase === 'cheat') {
-      if (!a.cheat) { a.cheat = true; stage.reset(); }
+      if (!a.cheat) { a.cheat = true; stage.reset(); play('rps.cheat_detected'); }
       return;
+    }
+
+    if (s.phase === 'choosing' && s.theirCommitted && !a.nudge) {
+      a.nudge = setTimeout(() => {
+        if (anim === a && match.snapshot().phase === 'choosing') play('rps.friend_waiting');
+      }, NUDGE_MS);
     }
 
     if (s.myMove && !a.me) a.me = stage.lockIn('me');
@@ -79,14 +88,16 @@ export function mountRpsView({container, match, myName}) {
       failsafe = setTimeout(() => {
         if (anim !== a || a.done) return;
         a.done = true;
+        play(ROUND_SOUND[s.outcome]);
         render(match.snapshot());
       }, REVEAL_FAILSAFE_MS);
       locked().then(async () => {
         if (anim !== a) return;
         stage.startShake();
         await stage.reveal({mine: s.myMove, theirs: s.theirMove, outcome: s.outcome});
-        if (anim !== a) return;
+        if (anim !== a || a.done) return; // the failsafe already showed (and sounded) this result
         a.done = true;
+        play(ROUND_SOUND[s.outcome]);
         render(match.snapshot());
       });
     }
@@ -131,6 +142,7 @@ export function mountRpsView({container, match, myName}) {
   return {
     update(s) { drive(s); render(s); },
     destroy() {
+      clearTimeout(anim?.nudge);
       anim = null; // pending animation callbacks check this and stop
       clearTimeout(failsafe);
       stage.reset();

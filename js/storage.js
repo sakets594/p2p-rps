@@ -13,6 +13,7 @@ import {cleanName, MAX_ROOM_NAME_LENGTH} from './names.js';
 
 const ROOMS_KEY = 'rps-rooms';
 const VERSION_KEY = 'p2p-games-storage-version';
+const MUTED_KEY = 'p2p-games-sound-muted';
 // Keys this app has ever used. Old names lists are listed so they get cleaned up.
 const OLD_NAME_KEYS = ['rps-names', 'rps-name'];
 
@@ -130,5 +131,21 @@ export function createStore(storage = browserStorage()) {
     write(ROOMS_KEY, rooms().filter((r) => r.code !== normalizeRoomCode(code)));
   }
 
-  return {rooms, rememberRoom, updateRoomName, forgetRoom};
+  /** Whether the player turned the meme sounds off. Sound is on until they do. */
+  function soundMuted() {
+    try {
+      return storage.getItem(MUTED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function setSoundMuted(muted) {
+    try {
+      if (muted) storage.setItem(MUTED_KEY, '1');
+      else storage.removeItem(MUTED_KEY);
+    } catch { /* private mode: the choice just lasts until the page closes */ }
+  }
+
+  return {rooms, rememberRoom, updateRoomName, forgetRoom, soundMuted, setSoundMuted};
 }

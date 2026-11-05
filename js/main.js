@@ -4,6 +4,8 @@ import {Room} from './room.js';
 import {createTransport} from './net.js';
 import {createStore} from './storage.js';
 import {allTags, filterGames, findGame, playersLabel} from './games.js';
+import {isMuted, play, setMuted, unlock} from './sound.js';
+import {soundsForChange} from './sound-events.js';
 
 const $ = (id) => document.getElementById(id);
 const HINT_AFTER_MS = 20_000;
@@ -17,6 +19,7 @@ let qrAutoOpened = false;
 let catalogTag = null; // category filter in the room's game picker
 let catalogEnabled = null; // whether picker cards can be clicked; re-render only when it changes
 let hosted = null; // the running game: {session, container, instance}
+let lastSnap = null; // previous room snapshot, to hear what changed (see js/sound-events.js)
 
 const DEFAULT_ROOM_NAME = 'Kali Pahadi Ke Pichhe';
 const store = createStore();
@@ -118,6 +121,7 @@ function enterRoom(code, {creator = false, name = null, roomName = null} = {}) {
   setQr(creator);
   catalogEnabled = null;
   hintVisible = false;
+  lastSnap = null;
   room = new Room({
     transport: createTransport(code),
     roomId: code,
@@ -137,6 +141,7 @@ function enterRoom(code, {creator = false, name = null, roomName = null} = {}) {
 }
 
 function leaveRoom() {
+  lastSnap = null;
   clearTimeout(hintTimer);
   unmountGame();
   room?.leave();
@@ -197,6 +202,8 @@ function setQr(open) {
 const INCOMPATIBLE = 'Your friend is using a different version of the app. Ask them to refresh the page, and refresh yours too.';
 
 function render(s) {
+  for (const id of soundsForChange(lastSnap, s)) play(id);
+  lastSnap = s;
   const them = s.opponentName ?? 'Friend';
   $('room-title').textContent = s.roomName ?? 'Room';
   if (s.roomName && roomId) store.updateRoomName(roomId, s.roomName);
@@ -348,6 +355,24 @@ function renderCatalog() {
   $('game-count').textContent = `${games.length} ${games.length === 1 ? 'game' : 'games'}`;
   $('game-empty').hidden = games.length > 0;
 }
+
+// --- Sound -------------------------------------------------------------------------
+// Browsers keep audio off until the page has been tapped, so the first tap anywhere wakes it.
+function renderSoundButton() {
+  const on = !isMuted();
+  $('btn-sound').textContent = on ? 'Sound on' : 'Sound off';
+  $('btn-sound').setAttribute('aria-pressed', String(on));
+}
+setMuted(store.soundMuted());
+renderSoundButton();
+for (const type of ['pointerdown', 'keydown']) {
+  addEventListener(type, () => unlock(), {once: true, capture: true});
+}
+$('btn-sound').addEventListener('click', () => {
+  setMuted(!isMuted());
+  store.setSoundMuted(isMuted());
+  renderSoundButton();
+});
 
 // --- Wiring ----------------------------------------------------------------------
 $('btn-create').addEventListener('click', () => enterRoom(generateRoomCode(), {creator: true}));

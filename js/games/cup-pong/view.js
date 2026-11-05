@@ -11,6 +11,8 @@
 import {layoutCups} from './physics.js';
 import {PARAMS as P, RULES} from './match.js';
 import {shapeThrow, ASSIST_DEFAULTS} from './aim-assist.js';
+import {play} from '../../sound.js';
+import {matchEndScenario, throwScenario} from '../../sound-events.js';
 
 // Swipe input: power comes from the swipe LENGTH (screen heights), which must finish within timeMs.
 const S = {minLen: 0.08, maxLen: 0.42, timeMs: 500, angleRange: 50, angleStep: 1.25, grab: 2.6};
@@ -289,6 +291,7 @@ export function mountCupPongView({container, match}) {
     const rack = vs.racks[1 - ev.seat];
     await playFlight(ev.sim);
     const f = ev.sim.frames, n = f.length - 3;
+    play(throwScenario(ev, ev.seat === seat));
     if (ev.hit) {
       const c = rack[ev.cup];
       poof(c.x, P.cupH, c.z);
@@ -325,6 +328,7 @@ export function mountCupPongView({container, match}) {
 
   async function endSequence(over) {
     vs.over = true; vs.canThrow = false; vs.ballVisible = false; updateHud();
+    play(matchEndScenario(over, seat));
     const w = over.winner;
     if (over.reason === 'cups') { confetti(); await msg('ALL CUPS!', 1400); }
     const title = w === null ? 'DRAW' : w === seat ? 'YOU WIN!' : `${rivalName} WINS`;
@@ -355,7 +359,7 @@ export function mountCupPongView({container, match}) {
 
   function setIntroText(t) { $('[data-intro-pill]').textContent = t; }
   function handleSnapshotPhase(snap) {
-    if (snap.phase === 'incompatible' || snap.phase === 'desync') { vs.canThrow = false; notice(snap.error); setIntroText('...'); return; }
+    if (snap.phase === 'incompatible' || snap.phase === 'desync') { vs.canThrow = false; notice(snap.error); setIntroText('...'); play('game.error'); return; }
     if (snap.phase === 'play' && !vs.started && !startedSeq) { startedSeq = true; setIntroText('STARTING...'); enqueue(() => startSequence(snap)); }
     else if (snap.phase === 'handshake' || snap.phase === 'flip') setIntroText('WAITING FOR YOUR FRIEND...');
   }

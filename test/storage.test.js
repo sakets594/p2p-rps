@@ -139,3 +139,20 @@ test('storage that throws never breaks the store', () => {
   store.rememberRoom({code: 'AAAAAA'});
   assert.deepEqual(store.rooms(), []);
 });
+
+test('sound is on until the player mutes it, and the choice is remembered', () => {
+  const storage = memoryStorage();
+  const store = createStore(storage);
+  assert.equal(store.soundMuted(), false);
+  store.setSoundMuted(true);
+  assert.equal(createStore(storage).soundMuted(), true);
+  store.setSoundMuted(false);
+  assert.equal(createStore(storage).soundMuted(), false);
+});
+
+test('the sound setting survives storage that throws', () => {
+  const broken = {getItem() { throw new Error('blocked'); }, setItem() { throw new Error('quota'); }, removeItem() { throw new Error('blocked'); }};
+  const store = createStore(broken);
+  assert.equal(store.soundMuted(), false);
+  assert.doesNotThrow(() => store.setSoundMuted(true));
+});

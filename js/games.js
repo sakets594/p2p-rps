@@ -8,6 +8,8 @@
 //   minPlayers / maxPlayers   how many people it takes (the room is two people for now)
 //   layout  'column' (default, the 460px column) or 'wide' (a big stage, e.g. a 3D table)
 //   resumable  true if the game can carry on after a short disconnect (it keeps its own log)
+//   ownsResultSound  true if the game plays its own win/lose/draw sound after its animation;
+//           otherwise the room plays it the moment the game reports a result (js/sound-events.js)
 //   load    () => import(...) of the game module, only called when a game starts; it exports
 //           createGame({session, container}) -> {destroy()}   (see js/games/rps/index.js)
 
@@ -33,6 +35,7 @@ export const GAMES = [
     blurb: 'Swipe to throw, bounce it in, clear their cups. Five rounds, two balls a turn.',
     status: 'ready',
     resumable: true,
+    ownsResultSound: true,
     load: () => import('./games/cup-pong/index.js'),
   },
   {
