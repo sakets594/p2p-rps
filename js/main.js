@@ -273,6 +273,8 @@ async function mountGame(session) {
   const container = document.createElement('div');
   const entry = {session, container, instance: null};
   hosted = entry;
+  // Games that still say "me / them" get their own seat's colors (css/tokens.css).
+  document.documentElement.dataset.seat = String(Math.max(0, session.players.findIndex((p) => p.id === session.selfId)));
   $('game-stage').append(container);
   const game = findGame(session.gameId);
   try {
@@ -295,6 +297,7 @@ function unmountGame() {
   const entry = hosted;
   hosted = null;
   if (!entry) return;
+  delete document.documentElement.dataset.seat;
   entry.instance?.destroy?.();
   entry.container.remove();
 }

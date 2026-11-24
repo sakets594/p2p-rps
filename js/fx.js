@@ -248,7 +248,13 @@ export function ringAt(el, color = '#ffffff', {count = 1, size = 1} = {}) {
 /** The two player colors from css/style.css, for tinting a burst: [mine, theirs]. */
 export function playerColors() {
   const cs = getComputedStyle(document.documentElement);
-  return [cs.getPropertyValue('--me').trim() || '#4f46e5', cs.getPropertyValue('--them').trim() || '#e11d74'];
+  return [cs.getPropertyValue('--me').trim() || '#ef3e5c', cs.getPropertyValue('--them').trim() || '#1190e8'];
+}
+
+/** [seat 0 color, seat 1 color]: the same for both players, from the --seat-a / --seat-b tokens. */
+export function seatColors(el = document.documentElement) {
+  const cs = getComputedStyle(el);
+  return [cs.getPropertyValue('--seat-a').trim() || '#ef3e5c', cs.getPropertyValue('--seat-b').trim() || '#1190e8'];
 }
 
 /** Confetti cannons from two low corners. */

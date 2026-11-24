@@ -20,6 +20,8 @@ export const HEADER = `
 export function renderTurnHeader(root, snap, scores = null, words = {}) {
   const q = (s) => root.querySelector(s);
   const me = snap.seat;
+  q('.tg-p.me').dataset.slot = String(me); // 0 = seat A, 1 = seat B: the chip's color never changes between screens
+  q('.tg-p.them').dataset.slot = String(1 - me);
   q('.tg-name-me').textContent = `${snap.names[me]} (you)`;
   q('.tg-name-them').textContent = snap.opponentName;
   const setScore = (el, v) => {

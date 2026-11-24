@@ -1,0 +1,69 @@
+/* Design tokens: the one place colors, shape, depth, type and motion are decided.
+   The look is "toy box": thick ink outlines, hard offset shadows (no blur), round shapes, bold rounded type.
+   Games and the room page use these variables and never write their own hex colors (game scenes that
+   draw on a canvas read them with getComputedStyle, see fx.js `seatColors`). */
+
+:root {
+  /* Ink and surfaces */
+  --ink: #1d1b2e;           /* outlines and text on bright fills; the same in light and dark */
+  --bg: #fff3dc;            /* page */
+  --card: #ffffff;          /* panels, buttons */
+  --fg: #1d1b2e;            /* text on page/card */
+  --muted: #6b6785;
+  --line: #e4dccb;          /* quiet dividers and empty tracks */
+  --edge: #1d1b2e;          /* the chunky outline and hard shadow color */
+  --gold: #ffd23f;          /* "the board", wins, sparkle */
+
+  --accent: #5b50d6;
+  --accent-fg: #ffffff;
+  --good: #168a47;
+  --bad: #d92d4a;
+
+  /* The two players. A seat keeps its color on BOTH screens (Alice is always coral, Bob always sky),
+     so "I'm the blue one" means the same thing to both of you. A seat's shape differs too (A ring,
+     B dot) so the two are never told apart by color alone. */
+  --seat-a: #ef3e5c;
+  --seat-b: #1190e8;
+  --on-seat: var(--ink);    /* text on a seat-colored fill */
+
+  /* Compatibility for games that still say "me / them": the viewer's own seat. */
+  --me: var(--seat-a);
+  --them: var(--seat-b);
+
+  /* Game surfaces */
+  --hole: var(--bg);        /* an empty slot cut into a board */
+
+  /* Shape and depth */
+  --r-sm: 8px; --r-md: 14px; --r-lg: 22px; --r-pill: 999px;
+  --bw: 2px;                /* ordinary outline */
+  --bw-heavy: 3px;          /* boards and pieces */
+  --lift: 3px;              /* how far a button's hard shadow reaches */
+  --lift-lg: 6px;           /* panels and boards */
+  --tap: 44px;              /* smallest comfortable touch target */
+
+  /* Space */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px;
+
+  /* Type */
+  --font: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Motion */
+  --ease-pop: cubic-bezier(.3, 1.5, .5, 1);
+  --t-fast: .12s;
+  --t: .25s;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15122a; --card: #221e3d; --fg: #f6f2ff; --muted: #a9a3c8; --line: #352f5a; --edge: #05040d;
+    --accent: #9d93ff; --accent-fg: #15122a; --good: #4ade80; --bad: #ff6b81;
+  }
+}
+
+/* Seat 1 sees itself as seat B. Set on <html> by the room (main.js), or on a wrapper in a preview page. */
+[data-seat="1"] { --me: var(--seat-b); --them: var(--seat-a); }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-fast: 0s; --t: 0s; }
+}

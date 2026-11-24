@@ -2,9 +2,9 @@
 
 import {loadCss} from '../../load-css.js';
 import {TurnMatch} from '../turn-match.js';
-import {HEADER, ownerClass, renderTurnHeader} from '../turn-ui.js';
+import {HEADER, renderTurnHeader} from '../turn-ui.js';
 import {COLS, ROWS, connectFourRules} from './rules.js';
-import {burstAt, playerColors, ringAt, shake, vibrate} from '../../fx.js';
+import {burstAt, ringAt, seatColors, shake, vibrate} from '../../fx.js';
 
 export async function createGame({session, container}) {
   await loadCss(new URL('../board.css', import.meta.url));
@@ -37,13 +37,13 @@ export async function createGame({session, container}) {
       discs.forEach((d, r) => {
         const isLine = line?.some(([lr, lc]) => lr === r && lc === c);
         const isLast = fresh && last && last[0] === r && last[1] === c;
-        d.className = `c4-disc ${ownerClass(grid[r][c], snap)}${isLine ? ' line' : ''}${isLast ? ' last' : ''}`;
+        d.className = `c4-disc${grid[r][c] === null ? '' : ` seat-${grid[r][c]}`}${isLine ? ' line' : ''}${isLast ? ' last' : ''}`;
         if (isLine) d.style.setProperty('--i', String(line.findIndex(([lr, lc]) => lr === r && lc === c)));
         if (isLast) {
           d.style.setProperty('--drop', `calc(-109% * ${r + 1})`);
           const mine = grid[r][c] === snap.seat;
           setTimeout(() => { // it lands at about 55% of the drop
-            const color = playerColors()[mine ? 0 : 1];
+            const color = seatColors(boardEl)[grid[r][c]];
             burstAt(d, 'pop', [color]);
             ringAt(d, '#ffffff', {size: 0.8});
             boardEl.animate([{transform: 'translateY(0)'}, {transform: 'translateY(4px)'}, {transform: 'translateY(0)'}], {duration: 220, easing: 'ease-out'});

@@ -9,7 +9,7 @@
 
 .bs-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; padding: 4px; border-radius: 10px; background: #1b6aa5; }
 .bs-grid.small { max-width: 260px; }
-.bs-cell { aspect-ratio: 1; padding: 0; border: 0; border-radius: 3px; background: rgba(255, 255, 255, .16); position: relative; font-size: .8rem; line-height: 1; }
+.bs-cell { --lift: 0px; min-height: 0; box-shadow: none; aspect-ratio: 1; padding: 0; border: 0; border-radius: 3px; background: rgba(255, 255, 255, .16); position: relative; font-size: .8rem; line-height: 1; }
 .bs-cell:disabled { opacity: 1; cursor: default; }
 button.bs-cell:hover:not(:disabled) { background: rgba(255, 255, 255, .4); border: 0; }
 .bs-cell.ship { background: #dfe5ee; }
