@@ -40,6 +40,7 @@ The room is two players for now; a third person who joins is ignored.
 | `js/sound-map.js` | Which meme clips can play for which moment (one scenario, many clips, one picked at random). |
 | `js/sound.js` | Plays them: one clip at a time, mute, loads on first tap. |
 | `js/sound-events.js` | Turns room changes and Cup Pong throws into scenario ids. |
+| `js/fx.js` | Effects: glowing particles (stars, sparks, emoji), shockwave rings, fireworks, floating "+1" text, VICTORY / DEFEAT / DRAW banners, phone vibration. Games call it for their own moments. Add `?tune` to the URL for live sliders (Tweakpane). `preview/fx-demo.html?game=ttt\|c4\|dots\|mm\|bs\|tv\|result` plays a scripted match to watch them. |
 
 Messages on the wire are `{t: kind, ...}`: `hello`, `propose`, `accept`, `decline`, `cancel`, `end`, and
 `game` (which carries a game's own message, stamped with a session id so a late message from a game you

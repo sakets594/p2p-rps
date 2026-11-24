@@ -5,6 +5,7 @@ import {loadCss} from '../../load-css.js';
 import {TurnMatch} from '../turn-match.js';
 import {HEADER, renderTurnHeader} from '../turn-ui.js';
 import {SIZE, dotsRules} from './rules.js';
+import {burstAt, floatText, playerColors, ringAt, vibrate} from '../../fx.js';
 
 const GAP = 60; // distance between dots in SVG units
 const PAD = 22;
@@ -48,6 +49,8 @@ export async function createGame({session, container}) {
   for (let r = 0; r <= SIZE; r++) for (let c = 0; c <= SIZE; c++) svg.append(svgEl('circle', {cx: at(c), cy: at(r), r: 5, class: 'db-dot'}));
 
   let seenMoves = -1;
+  let seenOwner = null; // box owners as last drawn, to spot a box that just closed
+  let seenLines = new Set();
   const render = (snap) => {
     renderTurnHeader(container, snap, snap.state.scores, {myTurn: 'Your move (a closed box gives you another)'});
     const {h, v, owner} = snap.state;
@@ -55,16 +58,30 @@ export async function createGame({session, container}) {
     seenMoves = snap.moves;
     for (const l of lines) {
       const who = (l.h ? h : v)[l.r][l.c];
-      l.line.setAttribute('class', `db-line${who === null ? '' : who === snap.seat ? ' mine' : ' theirs'}`);
+      const key = `${l.h}${l.r},${l.c}`;
+      const isNew = who !== null && !seenLines.has(key);
+      if (who !== null) seenLines.add(key);
+      l.line.setAttribute('class', `db-line${who === null ? '' : who === snap.seat ? ' mine' : ' theirs'}${isNew && fresh && seenOwner ? ' fresh' : ''}`);
+      if (isNew && fresh && seenOwner) burstAt(l.line, 'pop', [playerColors()[who === snap.seat ? 0 : 1]]);
       l.hit.classList.toggle('off', who !== null || !snap.myTurn || !!snap.over);
     }
-    void fresh;
     boxes.forEach((b, i) => {
       const who = owner[Math.floor(i / SIZE)][i % SIZE];
-      b.setAttribute('class', `db-box${who === null ? '' : who === snap.seat ? ' mine' : ' theirs'}`);
+      const closed = seenOwner && seenOwner[i] === null && who !== null;
+      const winner = snap.over && snap.over.winner !== null && snap.over.winner === who;
+      b.setAttribute('class', `db-box${who === null ? '' : who === snap.seat ? ' mine' : ' theirs'}${closed ? ' pop' : ''}${winner ? ' glow' : ''}`);
+      b.style.setProperty('--i', String(Math.floor(i / SIZE) + (i % SIZE)));
+      if (closed) {
+        const color = playerColors()[who === snap.seat ? 0 : 1];
+        burstAt(b, 'sparkle', [color, '#ffffff']);
+        ringAt(b, color);
+        floatText(b, '+1', {color});
+        if (who !== snap.seat) vibrate('tap');
+      }
       initials[i].textContent = who === null ? '' : snap.names[who].trim().charAt(0).toUpperCase();
       initials[i].setAttribute('class', `db-initial${who === null ? '' : who === snap.seat ? ' mine' : ' theirs'}`);
     });
+    seenOwner = owner.flat();
   };
   const match = new TurnMatch({session, rules: dotsRules, onChange: render});
   render(match.snapshot());

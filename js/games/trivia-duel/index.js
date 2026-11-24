@@ -3,6 +3,7 @@
 
 import {loadCss} from '../../load-css.js';
 import {TIME_LIMIT_MS, TriviaMatch} from './match.js';
+import {bump, burstAt, floatText, flash, ringAt, screenFlash, shake, vibrate} from '../../fx.js';
 
 const REVEAL_MS = 3_000;
 
@@ -29,6 +30,8 @@ export async function createGame({session, container}) {
 
   let startedAt = performance.now();
   let shownIndex = -1;
+  let revealedIndex = -1; // the question whose result already got its effect
+  let streak = 0; // right answers in a row
   let timer = null; // the per-question countdown tick
   let nextTimer = null; // moves on after the result has been shown
   let destroyed = false;
@@ -40,7 +43,10 @@ export async function createGame({session, container}) {
     clearInterval(timer);
     timer = setInterval(() => {
       const left = Math.max(0, TIME_LIMIT_MS - (performance.now() - startedAt));
-      bar.style.transform = `scaleX(${left / TIME_LIMIT_MS})`;
+      const frac = left / TIME_LIMIT_MS;
+      bar.style.transform = `scaleX(${frac})`;
+      bar.style.background = `hsl(${Math.round(frac * 130)} 80% 46%)`; // green, then amber, then red
+      bar.classList.toggle('urgent', left < 4000);
       $('.tv-left').textContent = `${Math.ceil(left / 1000)}s`;
       if (left <= 0) { clearInterval(timer); match.answer(-1, TIME_LIMIT_MS); }
     }, 100);
@@ -51,8 +57,10 @@ export async function createGame({session, container}) {
     const me = s.seat;
     $('.tg-name-me').textContent = `${s.names[me]} (you)`;
     $('.tg-name-them').textContent = s.opponentName;
-    $('.tg-score-me').textContent = s.scores.me;
-    $('.tg-score-them').textContent = s.scores.them;
+    for (const [sel, v] of [['.tg-score-me', s.scores.me], ['.tg-score-them', s.scores.them]]) {
+      const el = $(sel);
+      if (el.textContent !== String(v)) { if (el.textContent !== '0' || v !== 0) bump(el); el.textContent = v; }
+    }
     $('.tv-count').textContent = `Question ${s.index + 1} of ${s.total}`;
     $('.tv-q').textContent = s.question;
 
@@ -81,6 +89,29 @@ export async function createGame({session, container}) {
     note.className = 'tv-note';
     if (revealed) {
       clearInterval(timer);
+      if (revealedIndex !== s.index) {
+        revealedIndex = s.index;
+        const mineBtn = optsEl.children[s.myChoice];
+        if (s.myChoice === s.correct) {
+          streak++;
+          burstAt(mineBtn, 'good');
+          ringAt(mineBtn, '#4ade80');
+          flash(mineBtn, 'var(--good)');
+          if (s.gained.me > 0) floatText(mineBtn, `+${s.gained.me}`, {color: '#4ade80', size: 30});
+          if (streak >= 2) { // on a roll: flames rise from the score
+            burstAt($('.tg-score-me'), 'fire');
+            floatText($('.tg-p.me'), `🔥 STREAK x${streak}`, {color: '#ffb703', size: 20});
+          }
+          vibrate('good');
+        } else {
+          streak = 0;
+          screenFlash('#ff2d2d', 0.4, 500);
+          if (mineBtn) { shake(mineBtn, 0.8); flash(mineBtn, 'var(--bad)'); } else shake(optsEl, 0.5); // no pick: out of time
+          vibrate('bad');
+        }
+        const rightBtn = optsEl.children[s.correct];
+        if (rightBtn && s.myChoice !== s.correct) ringAt(rightBtn, '#4ade80'); // show where it was
+      }
       const g = s.gained;
       note.textContent = `${g.me > 0 ? `+${g.me}` : 'No points'} for you · ${g.them > 0 ? `+${g.them}` : 'none'} for ${s.opponentName}`;
       note.classList.add(g.me > g.them ? 'win' : g.me < g.them ? 'lose' : 'x');

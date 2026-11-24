@@ -13,10 +13,16 @@
 .tg-error { color: var(--bad); text-align: center; margin: 0; }
 
 /* Tic-Tac-Toe */
-.ttt-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ttt-board { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .ttt-cell { aspect-ratio: 1; font-size: 3rem; font-weight: 700; padding: 0; line-height: 1; }
 .ttt-cell.p-mine { color: var(--me); } .ttt-cell.p-theirs { color: var(--them); }
-.ttt-cell.line { background: color-mix(in srgb, var(--good) 25%, var(--card)); border-color: var(--good); }
+.ttt-cell.line { background: color-mix(in srgb, var(--good) 25%, var(--card)); border-color: var(--good); animation: fx-glow 1s ease-in-out infinite; }
+.ttt-cell { display: grid; place-items: center; }
+.ttt-mark { width: 62%; height: 62%; fill: none; stroke: currentColor; stroke-width: 11; stroke-linecap: round; }
+.ttt-mark.draw path, .ttt-mark.draw circle { stroke-dasharray: 1; stroke-dashoffset: 1; animation: fx-stroke .26s ease-out forwards; }
+.ttt-mark.draw path:nth-child(2) { animation-delay: .2s; }
+.ttt-strike { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.ttt-strike line { stroke: #ffd84a; stroke-width: 9; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 7px #ffb703); animation: fx-stroke .5s ease-out .15s forwards; }
 .ttt-cell:disabled { opacity: 1; cursor: default; }
 .ttt-cell.canplay:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
 
@@ -28,9 +34,23 @@
 .c4-disc { aspect-ratio: 1; border-radius: 50%; background: var(--bg); box-shadow: inset 0 2px 4px rgba(0, 0, 0, .35); }
 .c4-disc.p-mine { background: var(--me); } .c4-disc.p-theirs { background: var(--them); }
 .c4-disc.p-mine, .c4-disc.p-theirs { box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .3); }
-.c4-disc.line { outline: 3px solid #fff; }
-.c4-disc.last { animation: c4drop .35s ease-out; }
-@keyframes c4drop { from { transform: translateY(-260%); } to { transform: none; } }
+/* A disc falls from above the board (--drop is set per disc), stretches on the way down, squashes and bounces twice. */
+.c4-disc.last { animation: c4drop .7s linear; }
+@keyframes c4drop {
+  0% { transform: translateY(var(--drop, -260%)) scale(.9, 1.15); animation-timing-function: cubic-bezier(.5, 0, .9, .5); }
+  55% { transform: scale(1.22, .78); animation-timing-function: ease-out; }
+  64% { transform: translateY(-14%) scale(.94, 1.08); animation-timing-function: ease-in; }
+  74% { transform: scale(1.1, .9); animation-timing-function: ease-out; }
+  84% { transform: translateY(-4%) scale(1); animation-timing-function: ease-in; }
+  92%, 100% { transform: none; }
+}
+/* A winning four jump one after another (--i is the disc's place in the line). */
+.c4-disc.line { outline: 3px solid #fff; animation: c4win .8s ease-in-out calc(var(--i, 0) * 110ms) infinite; }
+.c4-disc.last.line { animation: c4drop .7s linear, c4win .8s ease-in-out calc(.7s + var(--i, 0) * 110ms) infinite; }
+@keyframes c4win {
+  0%, 60%, 100% { transform: none; box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .3), 0 0 0 0 transparent; }
+  30% { transform: translateY(-22%) scale(1.1); box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .3), 0 0 18px 7px #ffe27a; }
+}
 
 /* Dots and Boxes */
 .db-svg { width: 100%; height: auto; touch-action: manipulation; display: block; }
@@ -39,8 +59,11 @@
 .db-hit { stroke: transparent; stroke-width: 26; stroke-linecap: round; cursor: pointer; }
 .db-hit.off { cursor: default; pointer-events: none; }
 .db-line.mine { stroke: var(--me); } .db-line.theirs { stroke: var(--them); }
-.db-line.fresh { stroke-width: 7; }
+.db-line.fresh { stroke-width: 7; stroke-dasharray: 60; animation: fx-draw .3s ease-out; }
 .db-hit:hover + .db-line:not(.mine):not(.theirs) { stroke: var(--accent); }
+.db-box { transform-box: fill-box; transform-origin: center; }
+.db-box.pop { animation: fx-pop .4s cubic-bezier(.3, 1.5, .5, 1); }
+.db-box.glow { stroke: var(--good); stroke-width: 3; animation: fx-wave 1.1s ease-in-out calc(var(--i, 0) * 90ms) infinite; }
 .db-box.mine { fill: color-mix(in srgb, var(--me) 28%, transparent); }
 .db-box.theirs { fill: color-mix(in srgb, var(--them) 28%, transparent); }
 .db-initial { font-size: 22px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
@@ -54,3 +77,20 @@
 .mm-card.theirs { background: color-mix(in srgb, var(--them) 22%, var(--card)); border-color: var(--them); color: var(--fg); }
 .mm-card:disabled { opacity: 1; cursor: default; }
 .mm-card.mine:disabled, .mm-card.theirs:disabled { opacity: .85; }
+.mm-board { perspective: 700px; }
+.mm-card.flip { animation: fx-flip .38s cubic-bezier(.2, 1.3, .4, 1); }
+.mm-card.match { animation: fx-match .6s cubic-bezier(.3, 1.5, .5, 1); }
+
+/* Game-moment effects (js/fx.js does the particles; these are the in-place animations). */
+@keyframes fx-pop { 0% { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: none; } }
+@keyframes fx-flip { from { transform: rotateY(-100deg) scale(1.15); box-shadow: 0 10px 18px rgba(0, 0, 0, .35); } to { transform: none; } }
+@keyframes fx-match { 0% { transform: scale(1); } 35% { transform: scale(1.22) rotate(-4deg); box-shadow: 0 0 22px 6px #ffe27a; } 70% { transform: scale(.96) rotate(2deg); } 100% { transform: none; } }
+@keyframes fx-stroke { to { stroke-dashoffset: 0; } }
+@keyframes fx-wave { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .6; transform: scale(1.12); } }
+@keyframes fx-glow { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 16px 4px var(--good); } }
+@keyframes fx-glow-disc { 0%, 100% { box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .3), 0 0 0 0 #fff; } 50% { box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .3), 0 0 14px 5px #fff; } }
+@keyframes fx-draw { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
+@keyframes fx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) {
+  .ttt-cell.line, .ttt-mark.draw path, .ttt-mark.draw circle, .ttt-strike line, .c4-disc.last, .c4-disc.line, .db-line.fresh, .db-box.pop, .db-box.glow, .mm-card.flip, .mm-card.match { animation: none; stroke-dashoffset: 0; }
+}

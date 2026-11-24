@@ -6,6 +6,7 @@ import {createStore} from './storage.js';
 import {allTags, filterGames, findGame, playersLabel} from './games.js';
 import {isMuted, play, setMuted, unlock} from './sound.js';
 import {soundsForChange} from './sound-events.js';
+import {fxForScenario, mountTunePanel} from './fx.js';
 
 const $ = (id) => document.getElementById(id);
 const HINT_AFTER_MS = 20_000;
@@ -202,7 +203,7 @@ function setQr(open) {
 const INCOMPATIBLE = 'Your friend is using a different version of the app. Ask them to refresh the page, and refresh yours too.';
 
 function render(s) {
-  for (const id of soundsForChange(lastSnap, s)) play(id);
+  for (const id of soundsForChange(lastSnap, s)) { play(id); fxForScenario(id)?.(); }
   lastSnap = s;
   const them = s.opponentName ?? 'Friend';
   $('room-title').textContent = s.roomName ?? 'Room';
@@ -423,3 +424,5 @@ if (fromUrl) {
 }
 renderCatalog();
 renderRecents();
+
+if (new URLSearchParams(location.search).has('tune')) mountTunePanel().catch(() => {});

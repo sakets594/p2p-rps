@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fx demo: one game, two players, scripted moves</title>
+<!-- Dev page: ?game=ttt|c4|dots|mm|bs|tv plays a scripted match with real clicks so the effects can be watched or recorded. -->
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  body { margin: 0; } .pair { display: flex; gap: 12px; padding: 8px; justify-content: center; }
+  .pair > div { width: 450px; } h1 { font-size: 1.1rem; margin: 10px 0 0; }
+  #vib { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); background: #111; color: #fff; padding: 6px 14px; border-radius: 99px; font: 600 14px system-ui; opacity: 0; transition: opacity .15s; z-index: 2000; }
+  #vib.on { opacity: 1; }
+</style>
+</head>
+<body>
+<h1 id="title" class="center"></h1>
+<div id="stage"></div>
+<div id="vib"></div>
+<script type="module">
+import {GAMES} from '../js/games.js';
+import {memorySessions} from '../js/memory-transport.js';
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const q = new URLSearchParams(location.search);
+const NAMES = {ttt: 'tic-tac-toe', c4: 'connect-four', dots: 'dots-and-boxes', mm: 'memory-match', bs: 'battleship', tv: 'trivia-duel'};
+const id = NAMES[q.get('game') ?? 'ttt'];
+
+if (q.get('game') === 'result') { // the room-level result moments: win, loss, draw
+  document.getElementById('title').textContent = 'result moments';
+  document.getElementById('stage').innerHTML = '<main><section><h2 class="center">Room screen</h2><p class="center muted">(pretend a game just ended)</p></section></main>';
+  const fx = await import('../js/fx.js');
+  await wait(500);
+  fx.fxForScenario('game.won')(); await wait(4200);
+  fx.fxForScenario('game.lost')(); await wait(3200);
+  fx.fxForScenario('game.draw')(); await wait(2600);
+  window.__done = true;
+  throw new Error('result scene finished'); // stops the rest of this module
+}
+
+// A phone would buzz; show it instead.
+let vibTimer;
+navigator.vibrate = (p) => {
+  const el = document.getElementById('vib');
+  el.textContent = `📳 vibrate ${JSON.stringify(p)}`;
+  el.classList.add('on');
+  clearTimeout(vibTimer);
+  vibTimer = setTimeout(() => el.classList.remove('on'), 500);
+  return true;
+};
+
+const {sessions} = memorySessions({sid: `demo-${id}`});
+sessions.forEach((s) => { s.gameId = id; });
+const row = document.createElement('div');
+row.className = 'pair';
+const boxes = sessions.map(() => row.appendChild(document.createElement('div')));
+document.getElementById('stage').append(row);
+document.getElementById('title').textContent = id;
+const mod = await GAMES.find((g) => g.id === id).load();
+for (let i = 0; i < 2; i++) await mod.createGame({session: sessions[i], container: boxes[i]});
+await wait(600);
+
+const findIn = (sel) => { for (const b of boxes) { const e = b.querySelector(sel); if (e && !e.disabled) return e; } return null; };
+async function click(sel, tries = 40) {
+  for (let i = 0; i < tries; i++) { const e = findIn(sel); if (e) { e.click(); return true; } await wait(100); }
+  return false;
+}
+const clickSvg = (e) => e.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+
+if (id === 'tic-tac-toe') {
+  // whoever starts takes the top row; the other plays the middle row
+  const order = [0, 3, 1, 4, 2];
+  for (const i of order) { await click(`.ttt-cell[data-cell="${i}"]`); await wait(900); }
+} else if (id === 'connect-four') {
+  for (const c of [3, 4, 3, 4, 3, 4, 3]) { await click(`.c4-col[data-col="${c}"]`); await wait(1100); }
+} else if (id === 'dots-and-boxes') {
+  for (let n = 0; n < 60; n++) {
+    let e = null;
+    for (let t = 0; t < 30 && !e; t++) { e = boxes.map((b) => b.querySelector('.db-hit:not(.off)')).find(Boolean); if (!e) await wait(100); }
+    if (!e) break;
+    // prefer a line that closes a box, so scoring is on show: take the first free line next to an almost-closed box
+    clickSvg(e);
+    await wait(n < 14 ? 450 : 90);
+  }
+} else if (id === 'memory-match') {
+  const known = {};
+  const isDone = (i) => /mine|theirs/.test(boxes[0].querySelector(`.mm-card[data-card="${i}"]`).className);
+  const textOf = (i) => boxes[0].querySelector(`.mm-card[data-card="${i}"]`).textContent;
+  async function flip(i) { await click(`.mm-card[data-card="${i}"]`, 40); await wait(450); const t = textOf(i); if (t) known[i] = t; }
+  let next = 0, matches = 0;
+  while (matches < 3 && next < 18) {
+    const seen = {}; let pair = null;
+    for (const [i, t] of Object.entries(known)) {
+      if (isDone(i)) continue;
+      if (seen[t] !== undefined) { pair = [seen[t], +i]; break; }
+      seen[t] = +i;
+    }
+    if (pair) { await flip(pair[0]); await flip(pair[1]); matches++; await wait(700); continue; }
+    await flip(next); await flip(next + 1); next += 2; await wait(1800);
+  }
+} else if (id === 'battleship') {
+  boxes[0].querySelector('.bs-ready').click();
+  await wait(300);
+  boxes[1].querySelector('.bs-ready').click();
+  await wait(900);
+  const ships = (box) => [...box.querySelectorAll('.bs-mine .bs-cell')].map((c, i) => (c.classList.contains('ship') ? i : -1)).filter((i) => i >= 0);
+  const fired = [new Set(), new Set()];
+  for (let k = 0; k < 11; k++) {
+    let who = -1;
+    for (let t = 0; t < 40 && who < 0; t++) { who = boxes.findIndex((b) => b.querySelector('.bs-enemy .bs-cell:not(:disabled)')); if (who < 0) await wait(100); }
+    if (who < 0) break;
+    const fleet = ships(boxes[1 - who]);
+    const wantMiss = k < 2;
+    const pool = wantMiss ? Array.from({length: 100}, (_, i) => i).filter((i) => !fleet.includes(i)) : fleet;
+    const cell = pool.find((i) => !fired[who].has(i));
+    fired[who].add(cell);
+    boxes[who].querySelector(`.bs-enemy .bs-cell[data-cell="${Math.floor(cell / 10)},${cell % 10}"]`).click();
+    await wait(1000);
+  }
+} else if (id === 'trivia-duel') {
+  for (let round = 0; round < 2; round++) {
+    await wait(700);
+    boxes[0].querySelector(`.tv-opt[data-opt="${round * 2}"]`).click();
+    await wait(500);
+    boxes[1].querySelector(`.tv-opt[data-opt="${round * 2 + 1}"]`).click();
+    await wait(3700);
+  }
+}
+await wait(1800);
+window.__done = true;
+</script>
+</body>
+</html>

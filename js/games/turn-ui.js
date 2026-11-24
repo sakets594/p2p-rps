@@ -1,6 +1,8 @@
 // The header every turn-based game shows: both players with their score, whose turn it is, and a
 // status line. `mountTurnHeader` returns the elements to fill in; `renderTurnHeader` updates them.
 
+import {bump} from '../fx.js';
+
 export const HEADER = `
 <div class="tg-head">
   <div class="tg-p me"><b class="tg-name-me"></b><span class="tg-score tg-score-me">0</span></div>
@@ -20,8 +22,13 @@ export function renderTurnHeader(root, snap, scores = null, words = {}) {
   const me = snap.seat;
   q('.tg-name-me').textContent = `${snap.names[me]} (you)`;
   q('.tg-name-them').textContent = snap.opponentName;
-  q('.tg-score-me').textContent = scores ? scores[me] : '';
-  q('.tg-score-them').textContent = scores ? scores[1 - me] : '';
+  const setScore = (el, v) => {
+    const next = String(v);
+    if (next && el.textContent && el.textContent !== next) bump(el);
+    el.textContent = next;
+  };
+  setScore(q('.tg-score-me'), scores ? scores[me] : '');
+  setScore(q('.tg-score-them'), scores ? scores[1 - me] : '');
   q('.tg-p.me').classList.toggle('active', snap.myTurn);
   q('.tg-p.them').classList.toggle('active', snap.turn === 1 - me);
   const status = q('.tg-status');

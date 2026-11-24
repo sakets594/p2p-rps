@@ -4,6 +4,7 @@
 import {loadCss} from '../../load-css.js';
 import {BattleshipMatch} from './match.js';
 import {SIZE, cellsOf, keyOf} from './rules.js';
+import {burstAt, floatText, ringAt, screenFlash, shake, vibrate} from '../../fx.js';
 
 const TEMPLATE = `
 <div class="bs">
@@ -44,6 +45,8 @@ export async function createGame({session, container}) {
   $('.bs-shuffle').addEventListener('click', () => match.shuffle());
   $('.bs-ready').addEventListener('click', () => match.ready());
 
+  let seenShots = null; // keys of shots already drawn on each grid, so only a new one gets an effect
+  let seenIncoming = null;
   const render = (s) => {
     const them = s.opponentName;
     const status = $('.bs-status');
@@ -69,7 +72,18 @@ export async function createGame({session, container}) {
       const pending = s.pending && s.pending.r === r && s.pending.c === c;
       b.className = `bs-cell${shot ? (shot.hit ? ' hit' : ' miss') : ''}${pending ? ' pending' : ''}${!shot && enemyShip.has(k) ? ' unhit' : ''}`;
       b.disabled = !s.myTurn || !!shot;
+      if (shot && seenShots && !seenShots.has(k)) {
+        if (!shot.hit) { burstAt(b, 'splash'); ringAt(b, '#bfe6ff', {count: 3}); vibrate('tap'); }
+        else if (!shot.sunk) { burstAt(b, 'boom'); ringAt(b, '#ff9500', {count: 2}); shake($('.bs-enemy'), 0.4); vibrate('tap'); }
+        else { // a ship went down: big blast, smoke, a banner over the water
+          burstAt(b, 'bigBoom'); burstAt(b, 'smoke'); ringAt(b, '#ffcc00', {count: 3, size: 1.6});
+          shake($('.bs-enemy'), 1); screenFlash('#ff9500', 0.35, 500);
+          floatText($('.bs-enemy'), 'SHIP SUNK!', {color: '#ffcc00', size: 34});
+          vibrate('bigHit');
+        }
+      }
     });
+    seenShots = new Set(s.shots.map((x) => keyOf(x.r, x.c)));
 
     const ship = new Set(s.fleet.flatMap((sh) => cellsOf(sh).map(([r, c]) => keyOf(r, c))));
     const incoming = new Map(s.incoming.map((x) => [keyOf(x.r, x.c), x]));
@@ -77,7 +91,13 @@ export async function createGame({session, container}) {
       const k = keyOf(Math.floor(i / SIZE), i % SIZE);
       const inc = incoming.get(k);
       d.className = `bs-cell${ship.has(k) ? ' ship' : ''}${inc ? (inc.hit ? ' hit' : ' miss') : ''}`;
+      if (inc && seenIncoming && !seenIncoming.has(k)) {
+        burstAt(d, inc.hit ? 'boom' : 'splash');
+        ringAt(d, inc.hit ? '#ff3b30' : '#bfe6ff', {count: inc.hit ? 2 : 3});
+        if (inc.hit) { burstAt(d, 'smoke'); shake($('.bs-mine'), 0.6); screenFlash('#ff2d2d', 0.4, 450); vibrate('hit'); }
+      }
     });
+    seenIncoming = new Set(s.incoming.map((x) => keyOf(x.r, x.c)));
   };
 
   const match = new BattleshipMatch({session, onChange: render});
