@@ -4,6 +4,10 @@ Frontend-only multiplayer games. No game server, no backend, no cost. Nine two-p
 Rock Paper Scissors, Cup Pong, Tic-Tac-Toe, Connect Four, Dots and Boxes, Memory Match, Battleship,
 Hangman and Trivia Duel. A catalog entry with `status: 'soon'` shows as a "Soon" placeholder.
 
+[![Watch the 20-second launch video](assets/brag/brag.jpg)](assets/brag/brag.mp4)
+
+*20-second launch video, made with the [brag](https://github.com/latent-spaces/brag) skill. Click the picture to play it.*
+
 - **Hosting:** static files on GitHub Pages (free, HTTPS, which WebRTC needs).
 - **Connecting:** [Trystero](https://github.com/dmotz/trystero) uses free public Nostr relays only to
   introduce the two browsers. After that, all traffic is direct WebRTC.
