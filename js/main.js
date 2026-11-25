@@ -150,7 +150,7 @@ function leaveRoom() {
   room = null;
   setQr(false);
   clearInvite();
-  document.querySelector('main').classList.remove('wide');
+  document.querySelector('main').classList.remove('wide', 'immersive', 'playing');
   history.replaceState(null, '', location.pathname);
   showScreen('screen-home');
   renderRecents();
@@ -256,6 +256,7 @@ function render(s) {
   $('game-title').textContent = game?.title ?? '';
   $('game-away').hidden = !(playing && s.away);
   $('btn-again').hidden = !(playing && s.session.result);
+  document.querySelector('main').classList.toggle('playing', playing);
   document.querySelector('main').classList.toggle('wide', game?.layout === 'wide');
   document.querySelector('main').classList.toggle('immersive', playing && game?.layout === 'immersive');
 

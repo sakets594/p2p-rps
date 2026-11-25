@@ -10,7 +10,7 @@ import {SHIPS, SIZE, cellsOf, keyOf} from './rules.js';
 import {burstAt, fxForScenario, ringAt, screenFlash, shake, vibrate} from '../../fx.js';
 import {play} from '../../sound.js';
 import {synth} from '../../synth.js';
-import {calm, enter, gsap, stamp, titleCard} from '../../juice.js';
+import {calm, enter, gsap, stamp, titleCard, watchPace} from '../../juice.js';
 
 const LETTERS = 'ABCDEFGHIJ';
 const FLIGHT_MS = 560;
@@ -56,6 +56,7 @@ function buildGrid(el, tag, onClick) {
 export async function createGame({session, container}) {
   await loadCss(new URL('./battleship.css', import.meta.url));
   container.innerHTML = TEMPLATE;
+  const unwatch = watchPace(container.querySelector('.bs'));
   const unbake = bake(container.querySelector('.bs'), container.querySelector('.bs-sweep'), container.querySelector('.bs-waves'), container.querySelector('.bs-enemy')); // paint the rich backgrounds once (js/bake.js)
   const $ = (s) => container.querySelector(s);
   const root = $('.bs');
@@ -237,5 +238,5 @@ export async function createGame({session, container}) {
   enter(container.querySelectorAll('.bs-hud > *'), {y: -14, stagger: 0.08});
   titleCard(root, {kicker: 'Naval command', title: 'Battleship', sub: 'Place your fleet', theme: 'neon', hold: 0.8});
 
-  return {destroy() { unbake(); destroyed = true; clearTimeout(tellTimer); gsap.killTweensOf(container.querySelectorAll('*')); match.destroy(); container.replaceChildren(); }};
+  return {destroy() { unbake(); unwatch(); destroyed = true; clearTimeout(tellTimer); gsap.killTweensOf(container.querySelectorAll('*')); match.destroy(); container.replaceChildren(); }};
 }

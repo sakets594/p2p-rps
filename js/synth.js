@@ -13,6 +13,7 @@ function browserContext() {
 export function createSynth({makeContext = browserContext, muted = isMuted} = {}) {
   let ctx = null;
   let noise = null;
+  let limiter = null;
 
   function context() {
     if (!ctx) {
@@ -20,6 +21,22 @@ export function createSynth({makeContext = browserContext, muted = isMuted} = {}
     }
     if (ctx.state === 'suspended') ctx.resume?.().catch(() => {});
     return ctx;
+  }
+
+  /** Where every sound ends up: a limiter, so many sounds at once get squeezed instead of crackling. */
+  function output(c) {
+    if (limiter?.context !== c) {
+      limiter = null;
+      if (!c.createDynamicsCompressor) return c.destination;
+      const node = c.createDynamicsCompressor();
+      node.threshold.value = -14; node.knee.value = 6; node.ratio.value = 20; node.attack.value = 0.002; node.release.value = 0.12;
+      const trim = c.createGain();
+      trim.gain.value = 0.6; // the browser adds make-up gain to a compressor; take it back
+      node.connect(trim);
+      trim.connect(c.destination);
+      limiter = {context: c, node};
+    }
+    return limiter.node;
   }
 
   function noiseBuffer(c) {
@@ -45,7 +62,7 @@ export function createSynth({makeContext = browserContext, muted = isMuted} = {}
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(peak, t0 + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + secs);
-    g.connect(c.destination);
+    g.connect(output(c));
     return g;
   }
 
@@ -117,7 +134,7 @@ export function createSynth({makeContext = browserContext, muted = isMuted} = {}
         depth.connect(gain.gain);
         src.connect(filter);
         filter.connect(gain);
-        gain.connect(c.destination);
+        gain.connect(output(c));
         src.start(t);
         lfo.start(t);
         return () => {
@@ -169,7 +186,7 @@ export function createSynth({makeContext = browserContext, muted = isMuted} = {}
         const gain = c.createGain();
         gain.gain.setValueAtTime(0.0001, t);
         gain.gain.exponentialRampToValueAtTime(0.05, t + 0.4);
-        o.connect(filter); sub.connect(filter); filter.connect(gain); gain.connect(c.destination);
+        o.connect(filter); sub.connect(filter); filter.connect(gain); gain.connect(output(c));
         o.start(t); sub.start(t);
         return {
           speed(k) {
@@ -201,7 +218,7 @@ export function createSynth({makeContext = browserContext, muted = isMuted} = {}
         let i = 0;
         const out = c.createGain();
         out.gain.value = 1;
-        out.connect(c.destination);
+        out.connect(output(c));
         const play = (f, at, secs, kind, p) => {
           if (!f) return;
           const o = c.createOscillator();

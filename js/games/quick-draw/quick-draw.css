@@ -4,7 +4,7 @@
    No animated blurred shadows anywhere (Firefox stalls on them). */
 
 .qd { --qd-ink: #2a160a; --qd-paper: #f3dfb4; --qd-blood: #c8341f; display: flex; flex-direction: column; gap: var(--s-3);
-  width: 100%; max-width: min(100%, max(330px, calc((100dvh - 440px) * 1.67))); margin-inline: auto; }
+  width: 100%; max-width: min(100%, max(330px, calc((100dvh - 450px) * 1.67))); margin-inline: auto; }
 
 /* Wanted posters: the two players, with a revolver's chambers for rounds won */
 .qd-hud { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--s-2); align-items: stretch; }

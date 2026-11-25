@@ -18,9 +18,9 @@
 /* The word: blanks for the guesser (hints fill in), the full word for the drawer. */
 .dg-word { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--s-4); min-height: 2.2em; perspective: 400px; }
 .dg-word.mine { font-size: 1.5rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-.dg-group { display: inline-flex; gap: 5px; }
+.dg-group { display: inline-flex; gap: 5px; max-width: 100%; }
 .dg-letter {
-  width: 1.5em; height: 1.9em; border-bottom: 4px solid var(--edge); text-align: center;
+  width: 1.5em; min-width: 0; height: 1.9em; border-bottom: 4px solid var(--edge); text-align: center;
   font-size: 1.4rem; font-weight: 800; line-height: 1.9em; text-transform: uppercase;
 }
 .dg-letter.hint { color: var(--accent); }
@@ -45,7 +45,7 @@
 
 /* ===== Sketchbook theme ===== */
 .dg.sketch {
-  width: 100%; max-width: min(100%, max(330px, calc(100dvh - 460px))); margin-inline: auto; /* page and crayons both on screen */
+  width: 100%; max-width: min(100%, max(330px, calc(100dvh - 370px))); margin-inline: auto; /* page and crayons both on screen */
   --dg-ink: #1b1b2f; --dg-paper: #fffdf6; --dg-red: #ff4d6d; --dg-blue: #3a86ff; --dg-yellow: #ffd23f;
   padding: var(--s-3); border-radius: 20px; border: 3px solid var(--dg-ink); box-shadow: 0 6px 0 var(--dg-ink);
   background: #2f6f5e radial-gradient(circle at 20% 10%, rgba(255, 255, 255, .08), transparent 40%);
@@ -68,7 +68,8 @@
 .dg-pencil { font-size: 1.1rem; opacity: 0; scale: .4; transition: opacity .25s, scale .35s cubic-bezier(.3, 1.6, .5, 1); }
 .dg-tag.active .dg-pencil { opacity: 1; scale: 1; animation: dg-wiggle 1.2s ease-in-out infinite; }
 @keyframes dg-wiggle { 50% { rotate: -14deg; } }
-.dg-roundbox { font: .95rem/1 var(--font-marker); color: #fff; text-align: center; white-space: nowrap; }
+.dg-roundbox { font: .95rem/1.1 var(--font-marker); color: #fff; text-align: center; max-width: 6em; }
+.dg-tag:not(.active) .dg-pencil { display: none; }
 
 /* The timer: a pencil that gets used up */
 .dg-timer { display: flex; align-items: center; gap: var(--s-2); }
@@ -167,3 +168,17 @@
 .dg.sketch .dg-feed li.no { opacity: .85; } .dg-feed li.no em { color: #d1294a; }
 .dg.sketch .dg-feed li.wait { opacity: .6; }
 .dg.sketch .dg-next { font: 1.2rem/1 var(--font-marker); background: var(--dg-yellow); color: var(--dg-ink); border: 3px solid var(--dg-ink); box-shadow: 0 5px 0 var(--dg-ink); min-width: 200px; }
+
+.dg-card span { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; } /* one line, shrunk to fit (fitText) */
+
+/* A laptop-height window: the crayons (or the guesses) sit beside the page instead of under it. */
+@media (min-width: 640px) and (max-height: 900px) {
+  .dg.sketch { display: grid; grid-template-columns: minmax(0, 1fr) 170px; column-gap: var(--s-3); row-gap: 0; max-width: min(100%, max(480px, calc(100dvh - 140px))); align-items: start; }
+  .dg.sketch > * { grid-column: 1 / -1; margin-bottom: var(--s-2) !important; }
+  .dg.sketch > .dg-word.mine { justify-self: center; }
+  .dg.sketch > .dg-stage { grid-column: 1; grid-row: 8 / 13; }
+  .dg.sketch > :is(.dg-tools, .dg-guess, .dg-feed, .dg-next) { grid-column: 2; }
+  .dg.sketch > .dg-tools { grid-row: 8; } .dg.sketch > .dg-guess { grid-row: 9; flex-direction: column; } .dg.sketch > .dg-feed { grid-row: 10; max-height: 34dvh; overflow: hidden; } .dg.sketch > .dg-next { grid-row: 11; }
+  .dg.sketch > .dg-guess input { width: 100%; box-sizing: border-box; flex: none; }
+  .dg.sketch .dg-colors { display: grid; grid-template-columns: repeat(3, auto); } .dg.sketch .dg-actions { flex-direction: column; }  .dg.sketch .dg-actions .dg-skip { margin: 0; }
+}

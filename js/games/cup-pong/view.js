@@ -27,10 +27,11 @@ const ROOMS = {
   beach: {table: ['#c9924f', '#e3b877', '#f3d7a0'], edge: '#8a5a28', rim: '#ffffff', plank: 'rgba(120,70,20,.3)', bulbs: ['#ff6b6b', '#ffe66b', '#4ad6c8'], trail: '255,255,255', liquid: '#ff7a59', crowd: '#4a1c4f', hue: 'rgba(255,240,180,'},
   space: {table: ['#0b1c3d', '#123a6b', '#1c5aa0'], edge: '#071026', rim: '#5ff3ff', plank: 'rgba(95,243,255,.28)', bulbs: ['#5ff3ff', '#b48bff', '#5ff3ff'], trail: '140,250,255', liquid: '#7dffb0', crowd: '#0a1430', hue: 'rgba(120,220,255,'},
 };
-const COLORS = {
-  mine: {a: '#6fb1f5', b: '#4a8fe0', c: '#2d5fa6', d: '#1b3d70', rim: '#e3f0ff', in1: '#0d1d36', in2: '#243f6a'},
-  theirs: {a: '#f0716a', b: '#d9433c', c: '#b02c27', d: '#7e1c19', rim: '#ffe3df', in1: '#2b0907', in2: '#6a1b17'},
-};
+// Cup colours by seat, the same on both screens (seat A coral, seat B sky, as in css/tokens.css).
+const COLORS = [
+  {a: '#ff8096', b: '#ef3e5c', c: '#b82440', d: '#80142a', rim: '#ffe3e8', in1: '#2b0710', in2: '#6a1726'},
+  {a: '#63b8f7', b: '#1190e8', c: '#0c62a6', d: '#0a3f70', rim: '#e0f2ff', in1: '#0a1d36', in2: '#1d446a'},
+];
 
 const ease = {
   out: (k) => 1 - Math.pow(1 - k, 3),
@@ -85,7 +86,7 @@ export function mountCupPongView({container, match}) {
   const toast = {text: '', until: 0};
   const say = (t) => { toast.text = t; toast.until = performance.now() + 1200; };
   const target = () => vs.racks[1 - vs.turn];
-  const colorsFor = (rackSeat) => (rackSeat === seat ? COLORS.mine : COLORS.theirs);
+  const colorsFor = (rackSeat) => COLORS[rackSeat];
 
   // ---- helpers ------------------------------------------------------------------------------------------
   const wait = (ms) => new Promise((res) => setTimeout(() => { if (!destroyed) res(); }, ms));

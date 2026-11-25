@@ -67,12 +67,48 @@ export async function titleCard(host, {kicker = '', title, sub = '', theme = '',
   card.remove();
 }
 
+/** Watch the frame rate and put `lite` on `root` once a screen proves too slow (two 180-frame windows with more than 6% late
+    frames), so CSS can drop a costly extra there and keep it everywhere else. Returns a stop function. */
+export function watchPace(root) {
+  let last = 0, frames = 0, late = 0, bad = 0, raf = 0;
+  const tick = (now) => {
+    if (last && now - last < 250) { frames++; if (now - last > 25) late++; } // longer gaps are a hidden tab, not a slow screen
+    last = now;
+    if (frames >= 180) { if (late / frames > 0.06) bad++; frames = late = 0; }
+    if (bad >= 2) { root.classList.add('lite'); return; }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(raf);
+}
+
+/** Shrink one-line labels (player names) until they fit their box, now and once the display font has loaded. */
+export function fitText(els, min = 9) {
+  const fit = () => { for (const el of gsap.utils.toArray(els)) {
+    if (!el.isConnected) continue;
+    el.style.fontSize = '';
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.clientWidth && size > min) el.style.fontSize = `${size -= 0.5}px`;
+  } };
+  fit();
+  document.fonts?.ready.then(fit);
+}
+
+/** gsap.from for anything, buttons included. A CSS `transition` on transform makes GSAP read the start as the end, which
+    leaves the element stuck where it started, so transitions are off until it lands. Clean CSS is back afterwards. */
+export function arrive(els, vars) {
+  const list = gsap.utils.toArray(els);
+  if (!list.length) return null;
+  for (const el of list) el.style.transition = 'none';
+  return gsap.from(list, {...vars, clearProps: 'opacity,transform,transition'});
+}
+
 /** Bring elements in: rise, fade and settle, one after another. */
 export function enter(els, {y = 18, scale = 0.94, stagger = 0.06, delay = 0, duration = 0.45} = {}) {
   const list = gsap.utils.toArray(els);
   if (!list.length) return null;
-  if (calm()) return gsap.from(list, {opacity: 0, duration: 0.2, stagger: 0.02, delay, clearProps: 'opacity'});
-  return gsap.from(list, {opacity: 0, y, scale, duration, ease: 'back.out(1.6)', stagger, delay, clearProps: 'opacity,transform'});
+  if (calm()) return arrive(list, {opacity: 0, duration: 0.2, stagger: 0.02, delay});
+  return arrive(list, {opacity: 0, y, scale, duration, ease: 'back.out(1.6)', stagger, delay});
 }
 
 /** The match result's meme sound, for a game with `ownsResultSound` that shows its ending after an animation. */

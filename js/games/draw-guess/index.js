@@ -9,7 +9,7 @@ import {CANVAS, MAX_GUESS_LEN, WIDTHS} from './rules.js';
 import {burstAt, celebrate, floatText, vibrate} from '../../fx.js';
 import {play} from '../../sound.js';
 import {synth} from '../../synth.js';
-import {countTo, enter, gsap, pop, quake, resultSound, stamp, titleCard} from '../../juice.js';
+import {arrive, countTo, enter, fitText, gsap, pop, quake, resultSound, stamp, titleCard} from '../../juice.js';
 
 // Stroke colours are indexes on the wire; each side paints them with its own design tokens.
 const COLOR_VARS = ['--ink', '--seat-a', '--seat-b', '--good', '--gold-hot', '--paper'];
@@ -330,7 +330,8 @@ export async function mountGame({session, container, mode}) {
         });
         choose.append(b);
       });
-      gsap.from(choose.children, {y: 120, rotate: (i) => (i - 1) * 18, opacity: 0, duration: 0.55, ease: 'back.out(1.5)', stagger: 0.1, delay: 0.25});
+      fitText(choose.querySelectorAll('.dg-card span'));
+      arrive(choose.children, {y: 120, rotate: (i) => (i - 1) * 18, opacity: 0, duration: 0.55, ease: 'back.out(1.5)', stagger: 0.1, delay: 0.25});
       [0, 1, 2].forEach((i) => setTimeout(() => synth.blip(500 + i * 120), 250 + i * 100));
     }
     $('.dg-thinking').hidden = !(s.phase === 'choosing' && !s.iDraw);
@@ -369,7 +370,7 @@ export async function mountGame({session, container, mode}) {
     }
     if (s.phase === 'roundover' && wasOpen) {
       // Flip the letters of the answer in, one by one.
-      gsap.from(container.querySelectorAll('.dg-word .dg-letter'), {rotateX: -90, opacity: 0, duration: 0.4, ease: 'back.out(2)', stagger: 0.06});
+      arrive(container.querySelectorAll('.dg-word .dg-letter'), {rotateX: -90, opacity: 0, duration: 0.4, ease: 'back.out(2)', stagger: 0.06});
       const stageEl = $('.dg-stage');
       if (s.reason === 'solved') {
         stampEl = stamp(stageEl, 'Correct!', {rotate: -10});
@@ -432,6 +433,7 @@ export async function mountGame({session, container, mode}) {
 
   const match = new DrawGuessMatch({session, mode, onChange: render});
   render(match.snapshot());
+  fitText(container.querySelectorAll('.dg-name'));
   enter(container.querySelectorAll('.dg-hud > *'), {y: -14, stagger: 0.08});
   titleCard(container.querySelector('.dg'), {kicker: mode === 'blind' ? 'No peeking' : 'Sketch it, guess it', title: mode === 'blind' ? 'Blind Draw' : 'Draw & Guess',
     sub: `${last.rounds} rounds · take turns drawing`, theme: 'marker', hold: 1}).then(() => { introDone = true; });

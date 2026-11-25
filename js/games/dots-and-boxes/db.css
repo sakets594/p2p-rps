@@ -2,7 +2,7 @@
    seat colours, hatched boxes and marker initials. Keeps its own paper colours in light and dark mode. */
 
 .db-page {
-  position: relative; border-radius: 6px; padding: 6px; rotate: -.5deg;
+  position: relative; border-radius: 6px; padding: 6px; /* straight: a rotated page repaints slowly on a retina screen */
   background:
     linear-gradient(rgba(58, 134, 255, .18) 1px, transparent 1px) 0 0 / 14px 14px,
     linear-gradient(90deg, rgba(58, 134, 255, .18) 1px, transparent 1px) 0 0 / 14px 14px,

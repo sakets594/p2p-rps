@@ -8,7 +8,7 @@ async function setup() {
   const {net, sessions, transports} = memorySessions();
   const events = [[], []];
   const [a, b] = sessions.map((session, i) => new CupPongMatch({session, onEvent: (e) => events[i].push(e)}));
-  await settle(80); // handshake + coin flip use async hashing
+  await settle(); // handshake + coin flip use async hashing
   return {net, sessions, transports, a, b, events, byseat: [a, b]};
 }
 

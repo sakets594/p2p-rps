@@ -34,9 +34,9 @@
 
 /* The radar */
 .bs-radar { position: relative; padding: 6px; overflow: hidden; background: #062014; border: 3px solid #1d5a3a; } /* square: a rounded clip around a moving layer is slow */
-.bs-sweep {
-  position: absolute; left: 50%; top: 50%; width: 142%; aspect-ratio: 1; translate: -50% -50%; pointer-events: none; z-index: 2; opacity: .55;
-  background: conic-gradient(from 0deg, rgba(87, 255, 160, .5), rgba(87, 255, 160, 0) 60deg, transparent 360deg);
+.bs-sweep { /* only the lit quarter of the circle: a quarter of the pixels to blend on a retina screen */
+  position: absolute; left: 50%; bottom: 50%; width: 71%; aspect-ratio: 1; transform-origin: 0 100%; pointer-events: none; z-index: 2; opacity: .55;
+  background: conic-gradient(from 0deg at 0 100%, rgba(87, 255, 160, 0), rgba(87, 255, 160, .5) 60deg, transparent 60deg);
   animation: bs-sweep 3.2s linear infinite; will-change: rotate;
 }
 @keyframes bs-sweep { to { rotate: 360deg; } }
@@ -87,3 +87,5 @@
 @media (prefers-reduced-motion: reduce) {
   .bs-sweep, .bs-waves, .bs-cell.hit::after, .bs-cell.hit, .bs-cell.miss { animation: none; }
 }
+
+.bs.lite .bs-sweep { display: none; } /* a screen too slow for the sweep (watchPace) */

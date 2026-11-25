@@ -9,7 +9,7 @@ import {memoryRules} from './rules.js';
 import {burstAt, floatText, playerColors, ringAt, shake, vibrate} from '../../fx.js';
 import {play} from '../../sound.js';
 import {synth} from '../../synth.js';
-import {calm, gsap} from '../../juice.js';
+import {arrive, calm, gsap} from '../../juice.js';
 
 const PEEK_MS = 1300;
 
@@ -85,10 +85,10 @@ export async function createGame({session, container}) {
   // Deal the cards out from a deck at the top of the table, one after another.
   if (!calm()) {
     const deck = boardEl.getBoundingClientRect();
-    gsap.from(cards, {
+    arrive(cards, {
       x: (i) => deck.width / 2 - (cards[i].offsetLeft + cards[i].offsetWidth / 2),
       y: (i) => -cards[i].offsetTop - 40, rotate: () => gsap.utils.random(-30, 30), opacity: 0, duration: 0.45, ease: 'power3.out',
-      stagger: 0.035, delay: 0.9, onStart: () => synth.whoosh(0.6), clearProps: 'transform,opacity'});
+      stagger: 0.035, delay: 0.9, onStart: () => synth.whoosh(0.6)});
   }
 
   return {destroy() { unbake(); clearTimeout(timer); match.destroy(); container.replaceChildren(); }};

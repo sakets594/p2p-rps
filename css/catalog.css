@@ -24,6 +24,16 @@ main.immersive { max-width: 640px; padding-inline: var(--s-3); }
 main.immersive section { background: transparent; border: 0; box-shadow: none; padding: 0; }
 main.immersive .game-bar { margin-bottom: var(--s-2); }
 
+/* While a game runs the room steps back, so the board and its controls fit a laptop screen: one row for the room, one
+   for the game. The invite buttons and the names come back with the picker (every game shows the names itself). */
+main.playing { padding-top: var(--s-2); padding-bottom: var(--s-3); }
+main.playing section { gap: var(--s-2); }
+main.playing :is(#btn-qr, #btn-copy, #room-people, #qr-panel, .room-title) { display: none !important; }
+main.playing .bar { flex-wrap: nowrap; }
+main.playing .code { font-size: 1rem; }
+main.playing .game-bar { margin-bottom: var(--s-2); }
+main.playing:not(.immersive) section { padding: var(--s-2) var(--s-4) var(--s-3); }
+
 .tag-bar { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .tag-bar .chip { padding: var(--s-1) var(--s-3); }
 .tag-bar .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }

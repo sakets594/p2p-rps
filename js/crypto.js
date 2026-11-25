@@ -4,8 +4,16 @@
 
 export const toHex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
+/** How many hashes are being worked out right now, so tests can wait for them instead of guessing a delay. */
+export const hashing = {pending: 0};
+
 export async function sha256Hex(text) {
-  return toHex(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
+  hashing.pending++;
+  try {
+    return toHex(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
+  } finally {
+    hashing.pending--;
+  }
 }
 
 export function randomNonce() {

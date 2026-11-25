@@ -1,6 +1,8 @@
 // In-memory stand-in for the Trystero transport. Used by tests (and handy for
 // local experiments): same interface as net.js, no browser or network needed.
 
+import {hashing} from './crypto.js';
+
 export class MemoryNetwork {
   #peers = new Map();
   /** Optional hook: (from, to, msg) => msg | null. Return null to drop. */
@@ -80,5 +82,10 @@ export function memorySessions({
   return {net, sessions, transports};
 }
 
-/** Let queued microtasks and async crypto settle. 50 ms, because hashing runs on a thread pool and 20 ms flaked when test files ran in parallel. */
-export const settle = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms));
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Let messages and hashing settle: wait `ms`, then until no hash has been in flight for a few turns of the event loop
+    (hashing runs on a thread pool, so a fixed delay alone flaked on a busy machine). */
+export async function settle(ms = 50) {
+  await pause(ms);
+  for (let quiet = 0, left = 2000; quiet < 3 && left > 0; left--) { quiet = hashing.pending ? 0 : quiet + 1; await pause(1); }
+}

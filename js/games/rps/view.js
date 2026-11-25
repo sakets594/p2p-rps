@@ -5,7 +5,7 @@ import {bake} from '../../bake.js';
 import {HandStageTube} from './hands-tube.js';
 import {play} from '../../sound.js';
 import {synth} from '../../synth.js';
-import {calm, countTo, enter, gsap, pop, pulse, quake, titleCard} from '../../juice.js';
+import {calm, countTo, enter, fitText, gsap, pop, pulse, quake, titleCard} from '../../juice.js';
 
 const REVEAL_FAILSAFE_MS = 5_000;
 const NUDGE_MS = 5_000; // friend locked in and I am still thinking: time for a "jaldi bol"
@@ -76,6 +76,7 @@ export function mountRpsView({container, match, myName, seat = 0}) {
     btn.addEventListener('click', () => { synth.unlock(); synth.zap(1200); pop(btn, {scale: 0.9}); match.pick(btn.dataset.move); });
   }
   $('.next').addEventListener('click', () => { synth.unlock(); match.nextRound(); });
+  fitText(container.querySelectorAll('.who'));
   enter(container.querySelectorAll('.score > *'), {y: -16, stagger: 0.08});
   enter(container.querySelectorAll('.move'), {y: 30, stagger: 0.07, delay: 0.3});
   titleCard($('.rps'), {kicker: 'Fight night', title: 'Rock Paper Scissors', sub: 'Pick your move, then SHOOT!', theme: 'neon', hold: 0.8});

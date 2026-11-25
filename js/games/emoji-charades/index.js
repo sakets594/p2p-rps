@@ -12,7 +12,7 @@ import {MAX_GUESS_LEN} from './rules.js';
 import {burstAt, celebrate, floatText, vibrate} from '../../fx.js';
 import {play} from '../../sound.js';
 import {synth} from '../../synth.js';
-import {calm, countTo, enter, gsap, pop, quake, resultSound, stamp, titleCard} from '../../juice.js';
+import {arrive, calm, countTo, enter, fitText, gsap, pop, quake, resultSound, stamp, titleCard} from '../../juice.js';
 
 const TEMPLATE = `
 <div class="dg ec theatre">
@@ -223,7 +223,7 @@ export async function createGame({session, container}) {
         });
         choose.append(b);
       }
-      gsap.from(choose.children, {x: -60, rotate: -6, opacity: 0, duration: 0.5, ease: 'back.out(1.6)', stagger: 0.1, delay: 0.2});
+      arrive(choose.children, {x: -60, rotate: -6, opacity: 0, duration: 0.5, ease: 'back.out(1.6)', stagger: 0.1, delay: 0.2});
     }
     $('.ec-waiting').hidden = !(s.phase === 'choosing' && !s.iDescribe);
     $('.ec-waiting small').textContent = `${s.opponentName} is backstage, picking an act…`;
@@ -312,7 +312,7 @@ export async function createGame({session, container}) {
       enter(container.querySelectorAll('.ec-cat, .dg-word .dg-letter, .dg-word.mine'), {y: -16, stagger: 0.03});
     }
     if (s.phase === 'roundover' && prev.phase !== 'roundover') {
-      gsap.from(container.querySelectorAll('.dg-word .dg-letter'), {rotateX: -90, opacity: 0, duration: 0.4, ease: 'back.out(2)', stagger: 0.05});
+      arrive(container.querySelectorAll('.dg-word .dg-letter'), {rotateX: -90, opacity: 0, duration: 0.4, ease: 'back.out(2)', stagger: 0.05});
       const stage = $('.ec-stage');
       if (s.reason === 'solved') {
         stampEl = stamp(stage, 'Bravo!', {cls: 'gold', rotate: -8});
@@ -371,6 +371,7 @@ export async function createGame({session, container}) {
 
   const match = new EmojiCharadesMatch({session, onChange: render});
   render(match.snapshot());
+  fitText(container.querySelectorAll('.ec-name'));
   enter(container.querySelectorAll('.ec-hud > *'), {y: -14, stagger: 0.08});
   titleCard(root, {kicker: 'Tonight only', title: 'Emoji Charades', sub: `${last.rounds} acts · no words, just emoji`, theme: 'stage', hold: 1})
     .then(() => { introDone = true; });

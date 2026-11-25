@@ -6,7 +6,7 @@
   --lc-bg: #05010f; --lc-line: #2a2a6e; --lc-violet: #7a5cff; --me: #ff3d7f; --them: #22d3ff;
   /* Arena and thumb buttons together must fit the window, whatever its height. (The app reserves data-seat: it
      swaps --me and --them, so marks here use data-mark.) */
-  max-width: min(100%, max(320px, calc(100dvh - 390px))); margin-inline: auto; width: 100%;
+  max-width: min(100%, max(320px, calc(100dvh - 310px))); margin-inline: auto; width: 100%;
   display: flex; flex-direction: column; gap: var(--s-3); color: #e9e6ff;
   background: radial-gradient(120% 80% at 50% 0%, #1b0f4a 0%, var(--lc-bg) 60%); border: 3px solid #000; border-radius: 22px;
   padding: var(--s-3); box-shadow: 0 6px 0 #000;
@@ -34,6 +34,7 @@
 /* The arena is seen from behind and above: the floor tips away under a skyline. Swipes still read screen directions. */
 .lc-stage { padding-top: 9%; background: var(--lc-bg); }
 .lc-pixi { position: relative; width: 100%; aspect-ratio: 1; transform: perspective(900px) rotateX(27deg) scale(1.02); transform-origin: 50% 100%; margin-top: -9%; }
+.lc.flat .lc-pixi { transform: none; margin-top: 0; }
 .lc-sky { position: absolute; left: 0; right: 0; top: 0; height: 26%; overflow: hidden; background: linear-gradient(180deg, #10063a, #5a1a7a 70%, #ff3d9a); }
 .lc-sky svg { position: absolute; left: 0; bottom: 0; width: 100%; height: 78%; }
 .lc-ridge { fill: #0a0420; stroke: #b48bff; stroke-width: 1.2; } .lc-ridge.peak { display: none; }

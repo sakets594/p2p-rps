@@ -16,15 +16,19 @@
 - Large box-shadows (inset above all) and rounded `overflow: hidden` around a moving layer halve the frame rate: use borders
   and square clips.
 - Blur, `mix-blend-mode`, SVG turbulence and SVG pattern fills belong in a bitmap painted once.
+- Measure at retina size too: `zoom: 2` on the page in a 2880x1800 window. Put `watchPace()` on a game with one costly extra.
 
 **GSAP**
 - GSAP freezes CSS `scale`/`rotate`/`translate` on any element it moves: give the moving element a child for CSS motion.
+- Bring elements in with `arrive()` or `enter()`: a bare `gsap.from` on anything with a CSS `transition` (every button) sticks at its
+  start position.
 - Use `fromTo` with `clearProps` when a second tween could start before the first ends.
 - Wrap `SplitText` targets in a plain block, since grid and flex parents turn each word into an item.
 
 **Layout**
 - Stage plus controls fit the window: cap the stage with `100dvh`, and check 390x844 and 1280x720.
-- Text fits at phone width; `titleCard` shrinks long titles itself.
+- Text fits at phone width; `titleCard` shrinks long titles itself, `fitText()` shrinks player names. Try a long name.
+- Check in the real room, whose header takes 110 px, in every phase (setup, play, end), not only on the preview page.
 - Honour reduced motion with `calm()`.
 - Art, sound and fonts need a licence that allows redistribution; record it in `vendor/README.md`.
 - A skin's baked background may not rely on `url()` images inside gradients; `bake()` leaves those to the browser.

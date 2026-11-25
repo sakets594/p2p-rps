@@ -3,8 +3,8 @@
   --cp-ink: #1d2733;
   --cp-card: #fdf8ee;
   --cp-accent: #6c63d9;
-  --cp-you: #4a8fe0;
-  --cp-rival: #e0524b;
+  --cp-you: var(--me, #ef3e5c);
+  --cp-rival: var(--them, #1190e8);
   position: relative;
   width: 100%;
   max-width: 460px;

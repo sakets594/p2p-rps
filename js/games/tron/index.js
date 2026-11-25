@@ -10,7 +10,7 @@ import {DOWN, H, LEFT, RIGHT, UP, W, tickMsAt} from './rules.js';
 import {celebrate, vibrate} from '../../fx.js';
 import {play} from '../../sound.js';
 import {synth} from '../../synth.js';
-import {calm, countTo, enter, gsap, pop, pulse, quake, resultSound, titleCard} from '../../juice.js';
+import {calm, countTo, enter, fitText, gsap, pop, pulse, quake, resultSound, titleCard} from '../../juice.js';
 
 const PIXI_URL = new URL('../../../vendor/pixi/pixi.min.js', import.meta.url).href;
 const FILTERS_URL = new URL('../../../vendor/pixi/pixi-filters.js', import.meta.url).href;
@@ -191,6 +191,7 @@ export async function createGame({session, container}) {
   let stopMusic = null;
   let introDone = false;
   let shownRound = 0;
+  const pace = {frames: 0, slow: 0}; // this round's frames and how many of them were late
   const tweens = new Set();
   const keep = (t) => { if (t) tweens.add(t); return t; };
 
@@ -238,6 +239,7 @@ export async function createGame({session, container}) {
   function frame() {
     if (destroyed) return;
     const now = performance.now();
+    if (last?.phase === 'playing') { pace.frames++; if (app.ticker.elapsedMS > 25) pace.slow++; }
     const dt = Math.min(0.05, app.ticker.deltaMS / 1000);
     match.update(now);
     if (!last) return;
@@ -389,6 +391,9 @@ export async function createGame({session, container}) {
     if (!showGo && goPulse) { goPulse.kill(); goPulse = null; gsap.set(go, {clearProps: 'scale'}); }
 
     if (s.round !== shownRound && s.phase === 'waiting') {
+      // A screen that dropped frames last round gets the flat arena from here on: the tilt is the expensive part.
+      if (pace.frames > 120 && pace.slow / pace.frames > 0.06) root.classList.add('flat');
+      pace.frames = pace.slow = 0;
       // A fresh round: clear the old light, show the round card.
       shownRound = s.round;
       drawnLen = [0, 0];
@@ -551,6 +556,7 @@ export async function createGame({session, container}) {
   document.addEventListener('skinchange', applyTheme);
   fit();
   app.ticker.add(frame);
+  fitText(container.querySelectorAll('.lc-name'));
   enter(container.querySelectorAll('.lc-hud > *, .lc-pad > *'), {y: 20, stagger: 0.07});
   keep(titleCard(stage, {kicker: 'Neon arena', title: 'Light Cycles', sub: `First to ${last.toWin} rounds · don't hit the light`, theme: 'neon', hold: 1}).then(() => { introDone = true; }));
   shownRound = last.round;
