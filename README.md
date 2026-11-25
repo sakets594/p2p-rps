@@ -22,6 +22,71 @@ Both players' screens side by side, played by bots (`preview/game-demo.html`). C
 | **Memory Match**<br>[![Memory Match gameplay](assets/gameplay/memory-match.jpg)](assets/gameplay/memory-match.mp4) | **Battleship**<br>[![Battleship gameplay](assets/gameplay/battleship.jpg)](assets/gameplay/battleship.mp4) |
 | **Hangman**<br>[![Hangman gameplay](assets/gameplay/hangman.jpg)](assets/gameplay/hangman.mp4) | **Trivia Duel**<br>[![Trivia Duel gameplay](assets/gameplay/trivia-duel.jpg)](assets/gameplay/trivia-duel.mp4) |
 
+### Skins
+
+Every game has three looks (`js/skins.js`; the first in each list is the default). Open the site with `?debug` for a dropdown in the
+game bar that switches skin while you play (`?debug=off` hides it); `preview/skins.html?game=<id>` plays all three side by side.
+
+<details><summary>All skins, left to right in list order</summary>
+
+**Light Cycles**
+
+![Light Cycles skins](assets/skins/tron.jpg)
+
+**Rock Paper Scissors**
+
+![Rock Paper Scissors skins](assets/skins/rps.jpg)
+
+**Connect Four**
+
+![Connect Four skins](assets/skins/connect-four.jpg)
+
+**Cup Pong**
+
+![Cup Pong skins](assets/skins/cup-pong.jpg)
+
+**Quick Draw**
+
+![Quick Draw skins](assets/skins/quick-draw.jpg)
+
+**Battleship**
+
+![Battleship skins](assets/skins/battleship.jpg)
+
+**Tic-Tac-Toe**
+
+![Tic-Tac-Toe skins](assets/skins/tic-tac-toe.jpg)
+
+**Dots and Boxes**
+
+![Dots and Boxes skins](assets/skins/dots-and-boxes.jpg)
+
+**Memory Match**
+
+![Memory Match skins](assets/skins/memory-match.jpg)
+
+**Hangman**
+
+![Hangman skins](assets/skins/hangman.jpg)
+
+**Trivia Duel**
+
+![Trivia Duel skins](assets/skins/trivia-duel.jpg)
+
+**Draw & Guess**
+
+![Draw & Guess skins](assets/skins/draw-guess.jpg)
+
+**Blind Draw**
+
+![Blind Draw skins](assets/skins/blind-draw.jpg)
+
+**Emoji Charades**
+
+![Emoji Charades skins](assets/skins/emoji-charades.jpg)
+
+</details>
+
 - **Hosting:** static files on GitHub Pages (free, HTTPS, which WebRTC needs).
 - **Connecting:** [Trystero](https://github.com/dmotz/trystero) uses free public Nostr relays only to
   introduce the two browsers. After that, all traffic is direct WebRTC.
@@ -56,6 +121,7 @@ The room is two players for now; a third person who joins is ignored.
 | `js/synth.js` | Sound effects made on the spot with Web Audio (wind, whistle, gunshot, beeps); respects the Sound button. |
 | `js/sound-events.js` | Turns room changes and Cup Pong throws into scenario ids. |
 | `js/juice.js` | Motion for game views on GSAP: title cards between rounds (themes `neon`, `western`, `marker`, `stage`), staggered entrances, count-ups, rubber stamps, camera-style shakes, screen wipes, letter scrambles. Respects reduced motion. Styles in `css/juice.css`. |
+| `js/skins.js` | The skins of every game, the saved choice, and the debug dropdown. CSS lives in `js/games/<id>/skins.css`. |
 | `js/bake.js` | Paints an element's rich CSS background once into a bitmap, because Firefox repaints gradients whenever something moves over them. |
 | `vendor/` | GSAP 3.15 and Pixi.js 8.23 (+ pixi-filters) copied from npm, loaded only by the games that use them. Versions and licenses: `vendor/README.md`. |
 | `css/fonts.css` | Self-hosted display fonts (`assets/fonts/`): Bungee, Orbitron, Rye, Permanent Marker, Luckiest Guy, as `--font-game`, `--font-neon`, `--font-western`, `--font-marker`, `--font-cartoon`. |

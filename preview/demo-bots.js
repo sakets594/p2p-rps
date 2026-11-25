@@ -2,6 +2,7 @@
 // it reaches into views by their class names and into matches by patching their prototypes, which real code never does.
 
 import {findGame} from '../js/games.js';
+import {dress, setSkin, SKINS, skinPicker} from '../js/skins.js';
 import {memorySessions} from '../js/memory-transport.js';
 
 const id = new URLSearchParams(location.search).get('game') ?? 'tron';
@@ -29,6 +30,9 @@ function hook(Match, method = 'snapshot') {
 async function mount() {
   const {sessions} = memorySessions({sid: `demo-${id}-${Math.floor(realRandom() * 1e6)}`, players: [{id: 'alice', name: 'Alice'}, {id: 'bob', name: 'Bob'}]});
   sessions.forEach((s) => { s.gameId = id; });
+  const want = new URLSearchParams(location.search).get('skin') ?? undefined;
+  await Promise.all(roots.map((r) => dress(id, r, want)));
+  if (new URLSearchParams(location.search).has('debug')) document.body.prepend(skinPicker(id, () => roots));
   const mod = await findGame(id).load();
   window.__games = [await mod.createGame({session: sessions[0], container: roots[0]}), await mod.createGame({session: sessions[1], container: roots[1]})];
 }
@@ -490,5 +494,5 @@ const BOTS = {tron, 'quick-draw': quickDraw, 'draw-guess': drawGuess, 'blind-dra
   'tic-tac-toe': ticTacToe, 'connect-four': connectFour, 'dots-and-boxes': dotsAndBoxes, 'memory-match': memoryMatch,
   battleship, hangman, 'trivia-duel': triviaDuel, rps, 'cup-pong': cupPong};
 const runner = await BOTS[id]?.();
-window.__demo = {run: runner, matches, roots, rigQueue};
+window.__demo = {run: runner, matches, roots, rigQueue, skins: SKINS[id], setSkin: (s) => setSkin(id, s, roots)};
 if (new URLSearchParams(location.search).has('auto')) { await sleep(300); window.__demo.result = await runner(); }

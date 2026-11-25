@@ -32,25 +32,41 @@ export function bake(...els) {
     const size = `${el.clientWidth}x${el.clientHeight}`;
     if (stopped || s.busy || s.size === size || !el.clientWidth) return;
     s.busy = true;
+    const ver = s.ver;
     try {
-      const url = await paint(el, s.style);
-      if (url && !stopped) {
+      // Read the CSS now, not when bake() was called: a theme class or a skin may have arrived since.
+      el.style.background = '';
+      const cs = getComputedStyle(el);
+      const style = PROPS.map((p) => cs.getPropertyValue(p));
+      const url = style[1].includes('url(') ? null : await paint(el, style); // images are already bitmaps
+      if (!url) s.size = size;
+      if (url && !stopped && ver === s.ver) {
         el.style.background = `url("${url}") 0 0 / 100% 100% no-repeat`;
         if (s.url) URL.revokeObjectURL(s.url);
         s.url = url; s.size = size;
       }
     } catch { s.size = size; /* keep the CSS background */ }
     s.busy = false;
-    if (!stopped && s.size !== `${el.clientWidth}x${el.clientHeight}`) run(el); // it changed size meanwhile
+    if (!stopped && (ver !== s.ver || s.size !== `${el.clientWidth}x${el.clientHeight}`)) run(el); // its size or skin changed meanwhile
   }
   const ro = new ResizeObserver((entries) => { for (const e of entries) run(e.target); });
   for (const el of els.flat().filter(Boolean)) {
-    const cs = getComputedStyle(el);
-    state.set(el, {style: PROPS.map((p) => cs.getPropertyValue(p)), size: '', url: null, busy: false});
+    state.set(el, {size: '', ver: 0, url: null, busy: false});
     ro.observe(el);
   }
+  // A new skin: drop the bitmap, read the new CSS background, paint again.
+  const onSkin = () => requestAnimationFrame(() => {
+    for (const [el, s] of state) {
+      if (stopped) return;
+      s.size = '';
+      s.ver++;
+      run(el);
+    }
+  });
+  document.addEventListener('skinchange', onSkin);
   return () => {
     stopped = true;
+    document.removeEventListener('skinchange', onSkin);
     ro.disconnect();
     for (const [el, s] of state) { el.style.background = ''; if (s.url) URL.revokeObjectURL(s.url); }
   };

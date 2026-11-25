@@ -1,0 +1,29 @@
+/* Rock Paper Scissors skins: dojo (a paper-screen dojo at sunrise) and cyber (steel fists in a data arena). */
+[data-skin="dojo"] .rps.arena { color: #2b1710; border-color: #2b1710; box-shadow: none; border-bottom-width: 8px; background: repeating-linear-gradient(90deg, rgba(90, 50, 20, .1) 0 2px, transparent 2px 60px), linear-gradient(180deg, #f3e3c3, #e0c594); }
+[data-skin="dojo"] .rps .ring { border-radius: 0; border-color: #2b1710; background: #efe0bd; }
+[data-skin="dojo"] .rps .set { background: radial-gradient(circle at 50% 40%, #d7362a 0 24%, transparent 24.6%), linear-gradient(90deg, #4a2c17 0 2%, transparent 2% 32%, #4a2c17 32% 33.4%, transparent 33.4% 66.6%, #4a2c17 66.6% 68%, transparent 68% 98%, #4a2c17 98%), linear-gradient(180deg, #4a2c17 0 3%, transparent 3% 36%, rgba(74, 44, 23, .7) 36% 37.2%, transparent 37.2%), linear-gradient(180deg, #fff3d6 0 72%, #b9854d 72%); }
+[data-skin="dojo"] .rps .crowd { display: none; }
+[data-skin="dojo"] .rps .ring::after { background: #4a2c17; opacity: 1; height: 6px; }
+[data-skin="dojo"] .rps .lines { background: repeating-conic-gradient(from 3deg at 50% 50%, rgba(43, 23, 16, .55) 0 1.2deg, transparent 1.2deg 9deg); }
+[data-skin="dojo"] .rps .crack path { stroke: #2b1710; stroke-width: 4; }
+[data-skin="dojo"] .rps .ko, [data-skin="dojo"] .rps .vs b, [data-skin="dojo"] .rps-call { font-family: var(--font-marker) !important; color: #d7362a !important; -webkit-text-stroke: 4px #fff3d6; text-shadow: none; }
+[data-skin="dojo"] .rps .status { color: #2b1710; font-family: var(--font-marker); } [data-skin="dojo"] .rps .status.win { color: #14703f; } [data-skin="dojo"] .rps .status.lose { color: #b3261e; }
+[data-skin="dojo"] .rps .round-label { color: #b3261e; font-family: var(--font-marker); } [data-skin="dojo"] .rps .draws, [data-skin="dojo"] .rps .draws b { color: #4a2c17; }
+[data-skin="dojo"] .rps .fighter { border-color: #2b1710; box-shadow: 0 4px 0 #2b1710; } [data-skin="dojo"] .rps .tug { border-color: #2b1710; }
+[data-skin="dojo"] .rps .move { background: linear-gradient(180deg, #fff8e6, #ecd6a6) !important; color: #2b1710; border-color: #2b1710; box-shadow: 0 6px 0 #2b1710; font-family: var(--font-marker); border-radius: 6px; }
+[data-skin="dojo"] .rps .tube-hand .cuff { stroke-width: 5; }
+
+[data-skin="cyber"] .rps.arena { border-color: #00e5ff; box-shadow: none; background: linear-gradient(rgba(0, 229, 255, .09) 1px, transparent 1px) 0 0 / 22px 22px, linear-gradient(90deg, rgba(0, 229, 255, .09) 1px, transparent 1px) 0 0 / 22px 22px, #03060f; }
+[data-skin="cyber"] .rps .ring { border-color: #ff2bd6; border-radius: 0; background: #050914; }
+[data-skin="cyber"] .rps .set { background: radial-gradient(circle at 50% 70%, rgba(255, 43, 214, .5), transparent 45%), repeating-linear-gradient(180deg, transparent 0 72%, transparent 72%), linear-gradient(180deg, #050914 0 70%, rgba(255, 43, 214, .18) 70%), repeating-conic-gradient(from 270deg at 50% 70%, rgba(0, 229, 255, .34) 0 .5deg, transparent .5deg 9deg), #050914; }
+[data-skin="cyber"] .rps .fan { fill: #0a1c33; stroke: #00e5ff; stroke-width: 1; }
+[data-skin="cyber"] .rps .ring::after { background: #00e5ff; height: 3px; opacity: 1; }
+[data-skin="cyber"] .rps .lines { background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(0, 229, 255, .7) 0 .8deg, transparent .8deg 5deg); }
+[data-skin="cyber"] .rps .crack path { stroke: #ff2bd6; }
+[data-skin="cyber"] .tube-stage { --skin: #aebfd6; --outline: #0c2038; }
+[data-skin="cyber"] .tube-hand .line.s { stroke: #aebfd6; } [data-skin="cyber"] .tube-hand.win .line.o, [data-skin="cyber"] .tube-hand.win rect.o { stroke: #00e5ff; }
+[data-skin="cyber"] .rps .ko, [data-skin="cyber"] .rps .status, [data-skin="cyber"] .rps .who, [data-skin="cyber"] .rps-call, [data-skin="cyber"] .rps .move, [data-skin="cyber"] .rps .round-label { font-family: var(--font-neon) !important; font-weight: 900 !important; }
+[data-skin="cyber"] .rps .ko { color: #00e5ff; } [data-skin="cyber"] .rps .vs b { color: #ff2bd6; }
+[data-skin="cyber"] .rps .fighter { border-radius: 0; border-color: #00e5ff; box-shadow: none; clip-path: polygon(0 0, 92% 0, 100% 28%, 100% 100%, 8% 100%, 0 72%); }
+[data-skin="cyber"] .rps .move { background: #071225 !important; border: 2px solid #00e5ff; box-shadow: none; border-radius: 0; color: #c8f6ff; clip-path: polygon(8% 0, 100% 0, 100% 80%, 92% 100%, 0 100%, 0 20%); }
+[data-skin="cyber"] .rps .move.selected { background: #0b3a4d !important; }

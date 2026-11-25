@@ -1,0 +1,15 @@
+/* Dots and Boxes skins: blueprint (drafting paper) and stars (constellations in the night sky). */
+[data-skin="blueprint"] .db-page { rotate: none; border-color: #dcecff; background: linear-gradient(rgba(220, 236, 255, .3) 1px, transparent 1px) 0 0 / 70px 70px, linear-gradient(90deg, rgba(220, 236, 255, .3) 1px, transparent 1px) 0 0 / 70px 70px, linear-gradient(rgba(220, 236, 255, .13) 1px, transparent 1px) 0 0 / 14px 14px, linear-gradient(90deg, rgba(220, 236, 255, .13) 1px, transparent 1px) 0 0 / 14px 14px, #123f7d; }
+[data-skin="blueprint"] .db-page::before { display: none; } [data-skin="blueprint"] .tg.graph .db-dot { fill: #fff; }
+[data-skin="blueprint"] .tg.graph .db-line.mine, [data-skin="blueprint"] .tg.graph .db-line.theirs { stroke-width: 6; stroke-linecap: square; }
+[data-skin="blueprint"] .db-page { --me: #ff8ba0; --them: #7fd4ff; } [data-seat="1"] [data-skin="blueprint"] .db-page, [data-seat="1"][data-skin="blueprint"] .db-page { --me: #7fd4ff; --them: #ff8ba0; }
+[data-skin="blueprint"] .tg.graph .db-box.seat-0 { fill: rgba(255, 120, 145, .34); } [data-skin="blueprint"] .tg.graph .db-box.seat-1 { fill: rgba(120, 210, 255, .34); }
+[data-skin="blueprint"] .tg.graph .db-initial { font-family: var(--font-mono); font-weight: 700; } [data-skin="blueprint"] .tg.graph .db-initial.seat-0 { fill: #ffd5dc; } [data-skin="blueprint"] .tg.graph .db-initial.seat-1 { fill: #d8f2ff; }
+[data-skin="blueprint"] .tg.graph :is(.tg-status, .tg-p b) { font-family: var(--font-mono); font-weight: 700; }
+[data-skin="stars"] .db-page { rotate: none; border-color: #2b2f6b; background: radial-gradient(circle, #fff 1px, transparent 1.6px) 0 0 / 61px 61px, radial-gradient(circle, rgba(255, 255, 255, .6) .8px, transparent 1.4px) 23px 41px / 37px 43px, radial-gradient(70% 50% at 25% 25%, rgba(150, 70, 255, .5), transparent), radial-gradient(60% 50% at 80% 75%, rgba(30, 160, 255, .4), transparent), #060821; }
+[data-skin="stars"] .db-page::before { display: none; } [data-skin="stars"] .tg.graph .db-dot { fill: #fff6c4; r: 6px; stroke: rgba(255, 240, 170, .35); stroke-width: 9; }
+[data-skin="stars"] .db-page { --me: #ff7a94; --them: #5cc8ff; } [data-seat="1"] [data-skin="stars"] .db-page, [data-seat="1"][data-skin="stars"] .db-page { --me: #5cc8ff; --them: #ff7a94; }
+[data-skin="stars"] .tg.graph .db-line.mine, [data-skin="stars"] .tg.graph .db-line.theirs { stroke-width: 5; }
+[data-skin="stars"] .tg.graph .db-box.seat-0 { fill: rgba(255, 100, 135, .38); } [data-skin="stars"] .tg.graph .db-box.seat-1 { fill: rgba(70, 180, 255, .38); }
+[data-skin="stars"] .tg.graph .db-initial { font: 22px var(--font-neon); } [data-skin="stars"] .tg.graph .db-initial.seat-0, [data-skin="stars"] .tg.graph .db-initial.seat-1 { fill: #fff; }
+[data-skin="stars"] .tg.graph :is(.tg-status, .tg-p b) { font-family: var(--font-neon); font-weight: 700; }

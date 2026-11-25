@@ -1,0 +1,9 @@
+/* Hangman skins: night (a moonlit flight) and candy (a sugar sunset). The scene is the SVG in index.js. */
+[data-skin="night"] #hm-sky stop:first-child { stop-color: #0a0f3a; } [data-skin="night"] #hm-sky stop:last-child { stop-color: #43357f; }
+[data-skin="night"] .hm-stage::before { content: ''; position: absolute; inset: 0 0 30%; pointer-events: none; background: radial-gradient(circle at 82% 26%, #fff8d8 0 7%, rgba(255, 248, 216, .25) 7.4% 12%, transparent 12.5%), radial-gradient(circle, #fff 1px, transparent 1.5px) 0 0 / 43px 37px, radial-gradient(circle, rgba(255, 255, 255, .6) 1px, transparent 1.4px) 19px 23px / 61px 53px; }
+[data-skin="night"] .hm-cloud ellipse { fill: #6a5fb0; stroke: #221a55; } [data-skin="night"] .hm-sea { fill: #1c2c74; } [data-skin="night"] .hm-sea2 { fill: #101b52; } [data-skin="night"] .hm-letter:not(:empty) { background: linear-gradient(180deg, #fff6c4, #e8c85a); }
+[data-skin="night"] .hm :is(.hm-status, .hm-top, .hm-letter, .hm-keys button) { font-family: var(--font-game); }
+[data-skin="candy"] #hm-sky stop:first-child { stop-color: #ff7ac0; } [data-skin="candy"] #hm-sky stop:last-child { stop-color: #ffe3a1; }
+[data-skin="candy"] .hm-cloud ellipse { fill: #ffe6f3; stroke: #a13d7a; } [data-skin="candy"] .hm-sea { fill: #8ae6d2; stroke: #a13d7a; } [data-skin="candy"] .hm-sea2 { fill: #4fc7b5; } [data-skin="candy"] .hm-stage { border-color: #a13d7a; box-shadow: 0 6px 0 #a13d7a; }
+[data-skin="candy"] .hm-basket path:first-of-type { fill: #ffd36b; } [data-skin="candy"] .hm-weave { stroke: #a13d7a; } [data-skin="candy"] .hm-letter:not(:empty) { background: linear-gradient(180deg, #fff, #ffc4e2); border-color: #a13d7a; box-shadow: 0 4px 0 #a13d7a; color: #a13d7a; border-radius: 14px; }
+[data-skin="candy"] .hm-keys button:not(:disabled) { background: #ffd9ec; color: #a13d7a; } [data-skin="candy"] .hm :is(.hm-status, .hm-top, .hm-letter, .hm-keys button) { font-family: var(--font-cartoon); }

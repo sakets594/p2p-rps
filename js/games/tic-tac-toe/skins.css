@@ -1,0 +1,13 @@
+/* Tic-Tac-Toe skins: neon (tube signs on a brick wall) and sand (drawn in wet sand by the sea). */
+[data-skin="neon"] .ttt-slate { border-color: #1b1020; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='44'%3E%3Crect width='64' height='44' fill='%23170a10'/%3E%3Cg fill='%235a2a36'%3E%3Crect x='1' y='1' width='62' height='20' rx='2'/%3E%3Crect x='-31' y='23' width='62' height='20' rx='2'/%3E%3Crect x='33' y='23' width='62' height='20' rx='2' fill='%234d2430'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 64px 44px; background-clip: padding-box; }
+[data-skin="neon"] .ttt-grid, [data-skin="neon"] .ttt-mark, [data-skin="neon"] .ttt-strike line { filter: none !important; }
+[data-skin="neon"] .ttt-grid path { stroke: #fff2b0; stroke-width: 4; } [data-skin="neon"] .ttt-grid { opacity: .95; }
+[data-skin="neon"] .ttt-cell.s0 { color: #ff5c9a !important; background: radial-gradient(circle, rgba(255, 45, 130, .5), transparent 62%) !important; }
+[data-skin="neon"] .ttt-cell.s1 { color: #58e6ff !important; background: radial-gradient(circle, rgba(40, 200, 255, .45), transparent 62%) !important; }
+[data-skin="neon"] .ttt-mark { stroke-width: 7 !important; } [data-skin="neon"] .ttt-strike line { stroke: #f6ff6b !important; }
+[data-skin="neon"] .ttt-tray { display: none; } [data-skin="neon"] .tg.chalk .tg-status, [data-skin="neon"] .tg.chalk .tg-p { font-family: var(--font-neon); font-weight: 900; }
+[data-skin="sand"] .ttt-slate { border-color: #c89a5b; background: radial-gradient(130% 24% at 50% 108%, #2aa7c4 0 52%, #e9fbff 53% 57%, rgba(160, 110, 50, .5) 58% 66%, transparent 67%), radial-gradient(circle, rgba(120, 80, 30, .25) 1px, transparent 1.6px) 0 0 / 9px 9px, radial-gradient(circle, rgba(255, 255, 255, .35) 1px, transparent 1.6px) 4px 5px / 13px 13px, #eccd92; background-clip: padding-box; }
+[data-skin="sand"] .ttt-grid path { stroke: #a97b3d; stroke-width: 8; } [data-skin="sand"] .ttt-cell.s0 { color: #c23a4e !important; } [data-skin="sand"] .ttt-cell.s1 { color: #1a6aa5 !important; }
+[data-skin="sand"] .ttt-mark { stroke-width: 11 !important; } [data-skin="sand"] .ttt-strike line { stroke: #fff8e0 !important; }
+[data-skin="sand"] .ttt-tray { background: none; border: 0; } [data-skin="sand"] .ttt-tray i { background: #ff9eb5; border-radius: 50% 50% 8px 8px; height: 14px; width: 20px; }
+[data-skin="sand"] .tg.chalk .tg-status, [data-skin="sand"] .tg.chalk .tg-p { font-family: var(--font-cartoon); }

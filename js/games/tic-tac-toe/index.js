@@ -67,7 +67,7 @@ export async function createGame({session, container}) {
         b.style.setProperty('--chalk', owner === null ? '' : CHALK[owner]);
         b.setAttribute('aria-label', `Cell ${i + 1}${owner === null ? '' : owner === 0 ? ', X' : ', O'}`);
       }
-      b.className = `ttt-cell ${ownerClass(owner, snap)}${fresh ? ' fresh' : ''}${snap.state.line?.includes(i) ? ' line' : ''}${snap.myTurn && owner === null ? ' canplay' : ''}`;
+      b.className = `ttt-cell ${owner === null ? '' : `s${owner} `}${ownerClass(owner, snap)}${fresh ? ' fresh' : ''}${snap.state.line?.includes(i) ? ' line' : ''}${snap.myTurn && owner === null ? ' canplay' : ''}`;
       b.disabled = !snap.myTurn || owner !== null || !!snap.over;
       if (fresh) {
         synth.whoosh(0.16);

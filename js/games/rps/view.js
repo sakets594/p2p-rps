@@ -5,7 +5,7 @@ import {bake} from '../../bake.js';
 import {HandStageTube} from './hands-tube.js';
 import {play} from '../../sound.js';
 import {synth} from '../../synth.js';
-import {countTo, enter, pop, pulse, titleCard} from '../../juice.js';
+import {calm, countTo, enter, gsap, pop, pulse, quake, titleCard} from '../../juice.js';
 
 const REVEAL_FAILSAFE_MS = 5_000;
 const NUDGE_MS = 5_000; // friend locked in and I am still thinking: time for a "jaldi bol"
@@ -18,7 +18,9 @@ const TEMPLATE = `
     <div class="fighter them"><span class="who label-them">Friend</span><span class="n score-lose">0</span></div>
   </div>
   <h2 class="status center" aria-live="polite"></h2>
-  <div class="ring"><div class="hands"></div><div class="vs" aria-hidden="true"><span>✊</span><b>VS</b><span>✊</span></div></div>
+  <div class="tug" aria-hidden="true"><i></i></div>
+  <div class="ring"><div class="set" aria-hidden="true"><svg class="crowd" viewBox="0 0 400 70" preserveAspectRatio="xMidYMax slice">${Array.from({length: 17}, (_, i) => `<g class="fan" style="--d:${(i * 37) % 10}"><circle cx="${i * 25}" cy="${30 + (i * 7) % 9}" r="11"/><rect x="${i * 25 - 14}" y="${40 + (i * 7) % 9}" width="28" height="40" rx="10"/></g>`).join('')}</svg></div><div class="lines" aria-hidden="true"></div><div class="cam"><div class="hands"></div></div>
+    <svg class="crack" viewBox="-100 -100 200 200" aria-hidden="true">${Array.from({length: 11}, (_, i) => { const a = i * 0.571 + (i % 3) * 0.12; const r = 60 + (i * 29) % 40; const m = r * 0.5; return `<path d="M0 0 L${(Math.cos(a + 0.14) * m).toFixed(0)} ${(Math.sin(a + 0.14) * m).toFixed(0)} L${(Math.cos(a) * r).toFixed(0)} ${(Math.sin(a) * r).toFixed(0)}"/>`; }).join('')}</svg><div class="ko" aria-hidden="true"></div><div class="vs" aria-hidden="true"><span>✊</span><b>VS</b><span>✊</span></div></div>
   <div class="moves">
     <button class="move" data-move="rock"><span class="emoji">✊</span>Rock</button>
     <button class="move" data-move="paper"><span class="emoji">✋</span>Paper</button>
@@ -38,9 +40,30 @@ const ROUND_SOUND = {win: 'rps.round_won', lose: 'rps.round_lost', draw: 'rps.ro
 /** @returns {{update(snapshot), destroy()}} */
 export function mountRpsView({container, match, myName, seat = 0}) {
   container.innerHTML = TEMPLATE;
-  const unbake = bake(container.querySelector('.rps'), container.querySelector('.ring')); // paint the rich backgrounds once (js/bake.js)
+  const unbake = bake(container.querySelector('.rps'), container.querySelector('.ring'), container.querySelector('.set'), container.querySelector('.lines')); // paint the rich backgrounds once (js/bake.js)
   const $ = (sel) => container.querySelector(sel);
   const stage = new HandStageTube($('.hands'));
+  const ring = $('.ring');
+  const cam = $('.cam');
+  // The wind-up: the camera leans in and speed lines rush past. The clash: it kicks back, the floor cracks, the crowd leaps.
+  ring.addEventListener('rps:shoot', () => {
+    synth.whoosh(0.35);
+    if (calm()) return;
+    gsap.fromTo($('.lines'), {opacity: 0, scale: 1.5}, {opacity: 1, scale: 1, duration: 0.3, ease: 'power3.in'});
+    gsap.to(cam, {scale: 1.22, duration: 0.3, ease: 'power3.in'});
+  });
+  ring.addEventListener('rps:clash', (e) => {
+    synth.boom();
+    ring.classList.remove('roar'); void ring.offsetWidth; ring.classList.add('roar');
+    const ko = $('.ko');
+    ko.textContent = {win: 'K.O.!', lose: 'K.O.', draw: 'CLASH!'}[e.detail];
+    ko.dataset.r = e.detail;
+    if (calm()) return;
+    gsap.to($('.lines'), {opacity: 0, duration: 0.25});
+    gsap.fromTo(cam, {scale: 1.35}, {scale: 1, duration: 0.9, ease: 'elastic.out(1.1, .4)'});
+    gsap.timeline().fromTo($('.crack'), {opacity: 1, scale: 0.2, rotate: gsap.utils.random(0, 90)}, {scale: 1.15, duration: 0.14, ease: 'power4.out'}).to($('.crack'), {opacity: 0, duration: 0.9, delay: 0.5});
+    gsap.timeline({delay: 0.45}).fromTo(ko, {opacity: 1, scale: 4, rotate: -14}, {scale: 1, rotate: -7, duration: 0.3, ease: 'slam'}).add(() => quake(ring, 0.8)).to(ko, {opacity: 0, scale: 1.3, duration: 0.35, delay: 0.9});
+  });
   let anim = null; // animation progress for the current round, see drive()
   let shownScores = {win: 0, lose: 0, draw: 0};
   let failsafe = null;
@@ -123,6 +146,8 @@ export function mountRpsView({container, match, myName, seat = 0}) {
     countTo($('.score-win'), shownScores.win);
     countTo($('.score-draw'), shownScores.draw);
     countTo($('.score-lose'), shownScores.lose);
+    const played = shownScores.win + shownScores.lose; // the tug-of-war bar leans towards whoever is ahead
+    $('.tug i').style.transform = `scaleX(${played ? 0.08 + 0.84 * (shownScores.win / played) : 0.5})`;
     $('.round-label').textContent = `Round ${s.round}`;
     if (s.round !== shownRound) { if (shownRound) { pop($('.round-label'), {scale: 1.8}); synth.whoosh(0.3); } shownRound = s.round; }
     // The VS sign holds the ring until the first hand comes up.
@@ -158,6 +183,7 @@ export function mountRpsView({container, match, myName, seat = 0}) {
     update(s) { drive(s); render(s); },
     destroy() { unbake();
       vsPulse?.kill();
+      gsap.killTweensOf(container.querySelectorAll('*'));
       clearTimeout(anim?.nudge);
       anim = null; // pending animation callbacks check this and stop
       clearTimeout(failsafe);

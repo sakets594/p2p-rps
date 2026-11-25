@@ -283,6 +283,7 @@ export class HandStageTube {
     const hands = [me, them];
     const live = () => epoch === this.epoch;
     this.#callout('SHOOT!', '#ffd84a', 1.3);
+    this.#say('shoot');
     if (REDUCED) {
       me.setPose(mine); them.setPose(theirs);
       await sleep(350);
@@ -310,8 +311,12 @@ export class HandStageTube {
     await sleep(this.#ms(450));
   }
 
+  /** Tell the screen around the hands what just happened (it listens for `rps:shoot` and `rps:clash`). */
+  #say(name, detail) { this.box.dispatchEvent(new CustomEvent(`rps:${name}`, {detail, bubbles: true})); }
+
   #impact(outcome, mine, theirs) {
     this.#callout(callout(mine, theirs), CALL_COLOR[outcome], 1);
+    this.#say('clash', outcome);
     screenFlash('#ffffff', 0.6, 240);
     ringAt(this.svg, '#ffffff', {count: 3, size: 0.22});
     burstAt(this.svg, 'bigBoom');

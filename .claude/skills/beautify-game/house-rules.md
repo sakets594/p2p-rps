@@ -27,3 +27,4 @@
 - Text fits at phone width; `titleCard` shrinks long titles itself.
 - Honour reduced motion with `calm()`.
 - Art, sound and fonts need a licence that allows redistribution; record it in `vendor/README.md`.
+- A skin's baked background may not rely on `url()` images inside gradients; `bake()` leaves those to the browser.

@@ -88,6 +88,7 @@ export async function createGame({session, container}) {
     const x0 = side === 'e' ? host.width / 2 : x1 + 60;
     const y0 = side === 'e' ? host.height + 30 : y1 - 220;
     const peak = Math.min(y0, y1) - 90;
+    gsap.set(shell, {x: x0, y: y0});
     const o = {t: 0};
     gsap.to(o, {t: 1, duration: FLIGHT_MS / 1000, ease: 'power1.in', onUpdate: () => {
       const k = o.t;

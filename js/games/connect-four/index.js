@@ -8,12 +8,12 @@ import {COLS, ROWS, connectFourRules} from './rules.js';
 import {burstAt, ringAt, seatColors, shake, vibrate} from '../../fx.js';
 import {play} from '../../sound.js';
 import {synth} from '../../synth.js';
-import {gsap} from '../../juice.js';
+import {calm, gsap, quake} from '../../juice.js';
 
 export async function createGame({session, container}) {
   await loadCss(new URL('../board.css', import.meta.url));
   await loadCss(new URL('./c4.css', import.meta.url));
-  container.innerHTML = `<div class="tg">${HEADER}<div class="c4-rig"><div class="c4-rail"><span class="c4-ghost"><i></i></span></div><div class="c4-board"></div><svg class="c4-win" aria-hidden="true"></svg><div class="c4-legs"><i></i><i></i></div></div></div>`;
+  container.innerHTML = `<div class="tg">${HEADER}<div class="c4-rig"><div class="c4-rail"><span class="c4-ghost"><i></i></span></div><div class="c4-board"></div><div class="c4-legs"><i></i><i></i></div></div></div>`;
   const root = container.querySelector('.tg');
   const boardEl = container.querySelector('.c4-board');
   const ghost = container.querySelector('.c4-ghost');
@@ -50,6 +50,14 @@ export async function createGame({session, container}) {
   let lastMoves = -1;
   let wonShown = false;
   boardEl.addEventListener('pointerleave', () => ghost.classList.remove('on'));
+  // The whole rig tilts a little towards the pointer, like a toy you are leaning over.
+  const rig = container.querySelector('.c4-rig');
+  rig.addEventListener('pointermove', (e) => {
+    if (calm() || e.pointerType === 'touch') return;
+    const r = rig.getBoundingClientRect();
+    gsap.to(rig, {rotateY: ((e.clientX - r.left) / r.width - 0.5) * 9, rotateX: -((e.clientY - r.top) / r.height - 0.5) * 6, transformPerspective: 900, duration: 0.5, ease: 'power2.out'});
+  });
+  rig.addEventListener('pointerleave', () => gsap.to(rig, {rotateY: 0, rotateX: 0, duration: 0.7, ease: 'elastic.out(1, .5)'}));
   const render = (snap) => {
     lastSnap = snap;
     if (!snap.myTurn || snap.over) ghost.classList.remove('on');
@@ -84,12 +92,30 @@ export async function createGame({session, container}) {
       line.forEach(([lr, lc], k) => setTimeout(() => { burstAt(cols[lc].discs[lr], 'sparkle'); ringAt(cols[lc].discs[lr], '#ffe27a'); }, 750 + k * 110));
       setTimeout(() => shake(boardEl, 0.5), 750);
       setTimeout(() => winLine(line), 700);
+      setTimeout(() => openFloor(line), 2300);
     }
   };
+  /** The trapdoor: everything but the winning four rattles loose and pours out of the bottom, like the real toy. */
+  function openFloor(line) {
+    if (calm() || !container.querySelector('.c4-board')) return;
+    quake(boardEl, 0.8);
+    synth.whoosh(0.6);
+    const drop = boardEl.getBoundingClientRect().height + 60;
+    cols.forEach(({discs}, c) => discs.forEach((d, r) => {
+      if (!/seat-/.test(d.className) || line.some(([lr, lc]) => lr === r && lc === c)) return;
+      d.style.animation = 'none';
+      gsap.to(d, {y: drop, x: gsap.utils.random(-14, 14), rotate: gsap.utils.random(-200, 200), duration: 0.75 + r * 0.03, ease: 'power2.in', delay: 0.15 + (discs.length - r) * 0.07 + c * 0.03, onStart: () => synth.blip(260 + c * 40)});
+    }));
+    gsap.to(container.querySelectorAll('.c4-legs'), {y: 8, duration: 0.12, yoyo: true, repeat: 3});
+  }
+
   /** A glowing stroke through the four winning discs, drawn from end to end. */
   function winLine(line) {
-    const svg = container.querySelector('.c4-win');
-    if (!svg) return; // left the game before the line was drawn
+    if (!boardEl.isConnected) return; // left the game before the line was drawn
+    gsap.set(rig, {rotateX: 0, rotateY: 0}); // measure it square on
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'c4-win');
+    boardEl.append(svg);
     const box = svg.getBoundingClientRect();
     const pts = [line[0], line[line.length - 1]].map(([r, c]) => {
       const d = cols[c].discs[r].parentElement.getBoundingClientRect();
@@ -103,7 +129,7 @@ export async function createGame({session, container}) {
   const match = new TurnMatch({session, rules: connectFourRules, onChange: render});
   render(match.snapshot());
   introduce(root, {theme: 'toy', title: 'Connect Four', kicker: 'Drop it like it’s hot', sub: 'Four in a row wins', card: 'stage'});
-  const unbake = bake(container.querySelector('.c4-board')); // paint the rich backgrounds once (js/bake.js)
+  const unbake = bake(root, container.querySelector('.c4-board')); // paint the rich backgrounds once (js/bake.js)
 
   return {destroy() { unbake(); match.destroy(); container.replaceChildren(); }};
 }

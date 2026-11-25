@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PROTOTYPE - every skin of one game, side by side</title>
+<!-- Throwaway: /preview/skins.html?game=tron shows its three skins being played by bots (Alice's screen only). -->
+<style>
+  body { margin: 0; background: #0d0a1f; color: #fff; font: 700 16px system-ui; display: grid; grid-template-columns: repeat(3, 470px); gap: 6px; }
+  figure { margin: 0; overflow: hidden; } figcaption { padding: 8px 12px; } iframe { width: 470px; height: 860px; border: 0; }
+</style>
+</head>
+<body>
+<script type="module">
+import {SKINS} from '../js/skins.js';
+const game = new URLSearchParams(location.search).get('game') ?? 'tron';
+for (const [id, name] of SKINS[game]) {
+  const f = document.createElement('figure');
+  f.innerHTML = `<figcaption></figcaption><iframe src="game-demo.html?game=${game}&skin=${id}"></iframe>`;
+  f.querySelector('figcaption').textContent = `${game}: ${name}`;
+  const frame = f.querySelector('iframe');
+  frame.addEventListener('load', async () => {
+    const w = frame.contentWindow;
+    w.document.querySelectorAll('.col')[1].style.display = 'none';
+    while (!w.__demo) await new Promise((r) => setTimeout(r, 60));
+    w.__demo.run().catch((e) => console.error(id, e));
+  });
+  document.body.append(f);
+}
+</script>
+</body>
+</html>

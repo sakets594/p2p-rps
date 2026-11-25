@@ -54,3 +54,7 @@ main.immersive .game-bar { margin-bottom: var(--s-2); }
 @media (max-width: 340px) {
   .game-grid { grid-template-columns: 1fr; }
 }
+
+/* Debug mode (?debug): the skin dropdown in the game bar. */
+.skin-picker { font-size: .85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.skin-picker select { font: inherit; padding: 6px 8px; border-radius: 8px; border: var(--bw) solid var(--edge); background: var(--card); color: var(--fg); }

@@ -6,6 +6,7 @@ import {createStore} from './storage.js';
 import {allTags, filterGames, findGame, playersLabel} from './games.js';
 import {isMuted, play, setMuted, soundLog, unlock} from './sound.js';
 import {soundsForChange} from './sound-events.js';
+import {debugOn, dress, skinPicker} from './skins.js';
 import {fxForScenario, mountJankProbe, mountTunePanel, warmUp} from './fx.js';
 
 const $ = (id) => document.getElementById(id);
@@ -279,10 +280,12 @@ async function mountGame(session) {
   $('game-stage').append(container);
   const game = findGame(session.gameId);
   try {
+    await dress(game.id, container);
     const mod = await game.load();
     const instance = await mod.createGame({session, container});
     if (hosted !== entry) { instance?.destroy?.(); return; } // ended while loading
     entry.instance = instance;
+    if (debugOn()) $('game-title').after(skinPicker(game.id, () => [container]));
     // The game arrives with a short rise-and-settle instead of popping in.
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
       container.animate([{opacity: 0, transform: 'translateY(24px) scale(.97)'}, {opacity: 1, transform: 'none'}],
@@ -304,6 +307,7 @@ function unmountGame() {
   hosted = null;
   if (!entry) return;
   delete document.documentElement.dataset.seat;
+  document.querySelector('.skin-picker')?.remove();
   entry.instance?.destroy?.();
   entry.container.remove();
 }

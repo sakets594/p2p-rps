@@ -30,8 +30,15 @@
 .lc-speed i { display: block; height: 100%; width: calc(15% + 85% * var(--k, 0)); background: linear-gradient(90deg, #22d3ff, #ff3d7f); transition: width .4s; }
 
 /* Arena */
-.lc-stage { position: relative; border-radius: 14px; overflow: hidden; border: 2px solid var(--lc-violet); box-shadow: 0 0 0 4px #000, 0 0 24px rgba(122, 92, 255, .45); }
-.lc-pixi { width: 100%; aspect-ratio: 1; }
+.lc-stage { position: relative; border-radius: 14px; overflow: hidden; border: 3px solid var(--lc-violet); }
+/* The arena is seen from behind and above: the floor tips away under a skyline. Swipes still read screen directions. */
+.lc-stage { padding-top: 9%; background: var(--lc-bg); }
+.lc-pixi { position: relative; width: 100%; aspect-ratio: 1; transform: perspective(900px) rotateX(27deg) scale(1.02); transform-origin: 50% 100%; margin-top: -9%; }
+.lc-sky { position: absolute; left: 0; right: 0; top: 0; height: 26%; overflow: hidden; background: linear-gradient(180deg, #10063a, #5a1a7a 70%, #ff3d9a); }
+.lc-sky svg { position: absolute; left: 0; bottom: 0; width: 100%; height: 78%; }
+.lc-ridge { fill: #0a0420; stroke: #b48bff; stroke-width: 1.2; } .lc-ridge.peak { display: none; }
+.lc-orb { position: absolute; left: 50%; bottom: 12%; width: 20%; aspect-ratio: 1; margin-left: -10%; border-radius: 50%; background: linear-gradient(180deg, #ffe66b, #ff5aa8 70%); }
+.lc-streaks { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .5s; background: linear-gradient(90deg, var(--me), transparent 9%, transparent 91%, var(--them)); }
 .lc-pixi canvas { display: block; width: 100% !important; height: 100% !important; cursor: crosshair; }
 
 .lc-you {

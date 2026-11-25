@@ -2,7 +2,7 @@
    follows your pointer, and a glowing stroke through the winning four. Disc shapes and the drop/bounce animation
    stay in board.css. Keeps its own board colours in light and dark mode. */
 
-.c4-rig { position: relative; padding-top: 0; }
+.c4-rig { position: relative; padding-top: 0; transform-style: preserve-3d; }
 .c4-rail { position: relative; height: 46px; margin: 0 6px 4px; border-radius: 10px; background: rgba(0, 0, 0, .12); border: 2px dashed color-mix(in srgb, var(--fg) 25%, transparent); }
 .c4-ghost { position: absolute; left: 0; top: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; } /* GSAP moves this one */
 .c4-ghost i { /* and this one grows and bobs: GSAP would freeze a CSS scale on the element it moves */
@@ -15,20 +15,24 @@
 
 .tg.toy .c4-board {
   position: relative; z-index: 1;
-  background: linear-gradient(180deg, #8a5cff, #6a3fe0 60%, #5a32c4); border: 4px solid var(--ink); border-radius: 18px;
-  box-shadow: inset 0 4px 0 rgba(255, 255, 255, .35), inset 0 -6px 0 rgba(0, 0, 0, .25), 0 8px 0 var(--ink);
+  background: linear-gradient(180deg, #8a5cff, #6a3fe0 60%, #5a32c4); border: 4px solid var(--ink); border-top: 8px solid #b79bff; border-bottom-width: 12px; border-radius: 10px;
+  box-shadow: none; /* shadows on a panel this size repaint under every disc */
   padding: 12px; gap: 6px;
 }
-.c4-hole { display: block; border-radius: 50%; background: #1d1145; box-shadow: inset 0 5px 0 rgba(0, 0, 0, .5); }
+.c4-hole { display: block; border-radius: 50%; background: #1d1145; }
 .tg.toy .c4-disc { display: block; background: transparent; border-color: var(--ink); box-shadow: none; }
-.tg.toy .c4-disc.seat-0 { background: var(--seat-a); } .tg.toy .c4-disc.seat-1 { background: var(--seat-b); }
-.tg.toy .c4-disc.seat-0, .tg.toy .c4-disc.seat-1 { box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .25), inset 0 4px 0 rgba(255, 255, 255, .45); }
+.tg.toy .c4-disc.seat-0 { background: radial-gradient(circle at 34% 28%, #ffc2ce 0 9%, transparent 26%), radial-gradient(circle, transparent 0 56%, rgba(0, 0, 0, .22) 57% 64%, transparent 65%), radial-gradient(circle at 50% 35%, #ff6b84, var(--seat-a) 60%, #a51d3a); }
+.tg.toy .c4-disc.seat-1 { background: radial-gradient(circle at 34% 28%, #c9ebff 0 9%, transparent 26%), radial-gradient(circle, transparent 0 56%, rgba(0, 0, 0, .22) 57% 64%, transparent 65%), radial-gradient(circle at 50% 35%, #56b9ff, var(--seat-b) 60%, #0b5a9a); }
+.tg.toy .c4-disc.seat-0, .tg.toy .c4-disc.seat-1 { box-shadow: none; z-index: 1; }
+.tg.toy .c4-col { position: relative; }
+.tg.toy .c4-col::before { content: ''; position: absolute; inset: -8px 0; border-radius: 12px; opacity: 0; pointer-events: none; background: linear-gradient(180deg, rgba(255, 240, 160, .75), transparent 90%); transition: opacity .18s; }
+.tg.toy .c4-col:hover:not(:disabled)::before { opacity: 1; }
 .tg.toy .c4-col:hover:not(:disabled) { background: rgba(255, 255, 255, .14); }
 .c4-legs { position: relative; height: 22px; margin: -4px 8% 0; }
 .c4-legs i { position: absolute; bottom: 0; width: 22%; height: 28px; background: linear-gradient(180deg, #6a3fe0, #4b2aa6); border: 4px solid var(--ink); border-top: 0; border-radius: 0 0 10px 10px; }
 .c4-legs i:first-child { left: 0; clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%); }
 .c4-legs i:last-child { right: 0; clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%); }
-.c4-win { position: absolute; left: 0; right: 0; top: 50px; bottom: 22px; width: 100%; height: calc(100% - 72px); z-index: 2; pointer-events: none; overflow: visible; }
+.c4-win { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; overflow: visible; }
 .c4-win line { stroke: #ffe27a; stroke-width: 12; stroke-linecap: round; opacity: .85; stroke-dasharray: 1; stroke-dashoffset: 1; animation: fx-stroke .45s ease-out forwards; }
 .tg.toy .tg-status { font: 1.3rem/1.2 var(--font-game); letter-spacing: .02em; }
 .tg.toy .tg-p b { font-family: var(--font-game); font-weight: 400; letter-spacing: .02em; }

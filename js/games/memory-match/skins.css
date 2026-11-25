@@ -1,0 +1,9 @@
+/* Memory Match skins: arcane (tarot on velvet) and ocean (shells on the sea floor). */
+[data-skin="arcane"] .mm-table { background: radial-gradient(90% 70% at 50% 20%, #5a1f8a, #1c0736); border-color: #c79a3a; }
+[data-skin="arcane"] .mm-back { border-color: #f1cf72; background: radial-gradient(circle at 50% 50%, #f1cf72 0 10%, #1a0b33 11% 18%, #f1cf72 19% 21%, transparent 22%), conic-gradient(from 0deg at 50% 50%, #2b1458 0 12.5%, #3d1d78 0 25%, #2b1458 0 37.5%, #3d1d78 0 50%, #2b1458 0 62.5%, #3d1d78 0 75%, #2b1458 0 87.5%, #3d1d78 0); outline: 1.5px solid #f1cf72; outline-offset: -7px; }
+[data-skin="arcane"] .mm-front { background: linear-gradient(180deg, #fff3d0, #ecd08c); border-color: #7a5a14; }
+[data-skin="arcane"] .tg.felt :is(.tg-status, .tg-p b) { font-family: var(--font-western); }
+[data-skin="ocean"] .mm-table { background: radial-gradient(60% 40% at 30% 0, rgba(190, 250, 255, .55), transparent), radial-gradient(50% 40% at 75% 0, rgba(190, 250, 255, .4), transparent), radial-gradient(120% 22% at 50% 102%, #e6c98c 60%, transparent 62%), linear-gradient(180deg, #27b3d6, #0a3f78); border-color: #f2e2bd; }
+[data-skin="ocean"] .mm-back { border-color: #7a3f5e; border-radius: 46% 46% 16px 16px; background: repeating-conic-gradient(from -70deg at 50% 100%, #ffb8a3 0 8deg, #ff8f8a 8deg 16deg); outline: 0; }
+[data-skin="ocean"] .mm-front { border-color: #0a3f78; border-radius: 46% 46% 16px 16px; background: radial-gradient(circle at 50% 35%, #fff, #d9f6ff); }
+[data-skin="ocean"] .tg.felt :is(.tg-status, .tg-p b) { font-family: var(--font-cartoon); }

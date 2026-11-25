@@ -5,6 +5,10 @@ description: Give a game in this repo a full visual identity (scene, motion, sou
 
 # Beautify a game
 
+For a **new skin** only: add it to `SKINS` in `js/skins.js`, style it under `[data-skin="<id>"]` in the game's `skins.css` (canvas
+games: add the same id to the view's theme table), then run steps 4 to 7. View all skins with `preview/skins.html?game=<id>`. A skin
+changes the place (materials, light, type, backdrop), and keeps seat colours and layout.
+
 Make the game feel like a *place*: a stage with its own light, materials, type and sound, where every rule event has a
 visible consequence. Rules and match files stay untouched; only the view, its CSS and (for canvas games) its drawing change.
 

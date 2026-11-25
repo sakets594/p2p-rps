@@ -1,0 +1,21 @@
+/* Connect Four skins: neon (a glass arcade cabinet) and royal (a walnut and gold coin table). */
+[data-skin="neon"] .tg.toy { padding: 14px; border-radius: 18px; background: linear-gradient(rgba(255, 43, 214, .12) 1px, transparent 1px) 0 0 / 26px 26px, linear-gradient(90deg, rgba(255, 43, 214, .12) 1px, transparent 1px) 0 0 / 26px 26px, radial-gradient(90% 60% at 50% 100%, #3a0a52, #07020f); }
+[data-skin="neon"] .tg.toy .c4-board { background: linear-gradient(160deg, rgba(0, 229, 255, .2), rgba(122, 92, 255, .14)); border: 3px solid #00e5ff; box-shadow: none; outline: 3px solid rgba(0, 229, 255, .3); outline-offset: 2px; border-radius: 0; }
+[data-skin="neon"] .c4-hole { background: #05010f; box-shadow: none; border: 2px solid rgba(0, 229, 255, .5); }
+[data-skin="neon"] .tg.toy .c4-disc { border-color: transparent; }
+[data-skin="neon"] .tg.toy .c4-disc.seat-0 { background: radial-gradient(circle, #05010f 0 34%, #ff3d7f 36% 46%, #ffd0e0 49% 53%, #ff3d7f 57% 70%); }
+[data-skin="neon"] .tg.toy .c4-disc.seat-1 { background: radial-gradient(circle, #e2fbff 0 16%, #22d3ff 20% 34%, #05010f 36% 46%, #22d3ff 50% 70%); }
+[data-skin="neon"] .tg.toy .c4-disc.seat-0::after, [data-skin="neon"] .tg.toy .c4-disc.seat-1::after { display: none; }
+[data-skin="neon"] .c4-rail { border-color: #ff2bd6; background: rgba(255, 43, 214, .08); } [data-skin="neon"] .c4-legs { display: none; }
+[data-skin="neon"] .c4-win line { stroke: #f6ff6b; } [data-skin="neon"] .tg.toy .c4-col::before { background: linear-gradient(180deg, rgba(0, 229, 255, .7), transparent); }
+[data-skin="neon"] .tg.toy .tg-status, [data-skin="neon"] .tg.toy .tg-p b { font-family: var(--font-neon); font-weight: 900; color: #fff; }
+
+[data-skin="royal"] .tg.toy { padding: 14px; border-radius: 18px; background: radial-gradient(100% 80% at 50% 0, #15573f, #0a2c22); }
+[data-skin="royal"] .tg.toy .c4-board { background: repeating-linear-gradient(92deg, rgba(0, 0, 0, .16) 0 3px, transparent 3px 11px), linear-gradient(180deg, #8a5128, #5a3014); border: 6px solid #d9a441; box-shadow: 0 8px 0 #2a1608; border-radius: 10px; }
+[data-skin="royal"] .c4-hole { background: #1c0e06; box-shadow: 0 0 0 3px #d9a441; }
+[data-skin="royal"] .tg.toy .c4-disc { border-color: transparent; }
+[data-skin="royal"] .tg.toy .c4-disc.seat-0 { background: radial-gradient(circle at 32% 26%, #fff 0 5%, transparent 20%), radial-gradient(circle, #d8324f 0 48%, #7c1029 50% 56%, #e8a0ad 57% 62%, #a51d3a 64%); }
+[data-skin="royal"] .tg.toy .c4-disc.seat-1 { background: radial-gradient(circle at 32% 26%, #fff 0 5%, transparent 20%), radial-gradient(circle, #2f8fd8 0 48%, #0a4272 50% 56%, #a9d8f7 57% 62%, #14619f 64%); }
+[data-skin="royal"] .c4-rail { border: 3px solid #d9a441; background: rgba(0, 0, 0, .25); } [data-skin="royal"] .c4-legs i { background: #5a3014; border-color: #d9a441; }
+[data-skin="royal"] .c4-win line { stroke: #ffe9a8; } [data-skin="royal"] .tg.toy .c4-col::before { background: linear-gradient(180deg, rgba(255, 214, 120, .6), transparent); }
+[data-skin="royal"] .tg.toy .tg-status, [data-skin="royal"] .tg.toy .tg-p b { font-family: var(--font-western); color: #ffe9a8; }

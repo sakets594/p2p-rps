@@ -1,0 +1,14 @@
+/* Light Cycles skins: arctic (aurora over ice) and inferno (a lava field). The arena colours are THEMES in index.js. */
+[data-skin="arctic"] .lc { --lc-bg: #04131f; --lc-line: #1f5f7a; --lc-violet: #8fe9ff; background: linear-gradient(180deg, #0d3550, #04131f 60%); }
+[data-skin="arctic"] .lc-sky { background: radial-gradient(60% 90% at 25% 10%, rgba(90, 255, 190, .75), transparent 70%), radial-gradient(50% 100% at 70% 0, rgba(120, 140, 255, .75), transparent 70%), linear-gradient(180deg, #021019, #0b3a55); }
+[data-skin="arctic"] .lc-ridge.far, [data-skin="inferno"] .lc-ridge.far { display: none; }
+[data-skin="arctic"] .lc-ridge.peak { display: block; fill: #dff6ff; stroke: #6fb7d6; }
+[data-skin="arctic"] .lc-orb { width: 12%; margin-left: 22%; bottom: 52%; background: #f3fbff; }
+[data-skin="arctic"] .lc-turn { background: rgba(143, 233, 255, .1); } [data-skin="arctic"] .lc-go { background: linear-gradient(180deg, #f3fdff, #8fe9ff); color: #04131f; }
+[data-skin="arctic"] .lc-flash { background: #d8fbff; }
+[data-skin="inferno"] .lc { --lc-bg: #0d0301; --lc-line: #5a1a08; --lc-violet: #ff6a1a; background: radial-gradient(120% 80% at 50% 0, #5a1606, #0d0301 60%); }
+[data-skin="inferno"] .lc-sky { background: radial-gradient(50% 100% at 50% 100%, #ffb02e, transparent 70%), linear-gradient(180deg, #1d0401, #8f1f06); }
+[data-skin="inferno"] .lc-ridge.peak { display: block; fill: #1a0502; stroke: #ff7a1a; stroke-width: 2; }
+[data-skin="inferno"] .lc-orb { width: 22%; margin-left: -11%; bottom: 8%; background: radial-gradient(circle, #fff1c4, #ff8a2a 60%, transparent 70%); }
+[data-skin="inferno"] .lc-go { background: linear-gradient(180deg, #ffd36b, #ff5a1a); } [data-skin="inferno"] .lc-hint { color: #d98a5a; }
+[data-skin="inferno"] .lc-count { -webkit-text-stroke-color: #ff6a1a; }

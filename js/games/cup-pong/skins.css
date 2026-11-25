@@ -1,0 +1,7 @@
+/* Cup Pong skins: the rooms are painted in view.js (ROOMS, PAINT); this is the frame and the type around them. */
+[data-skin="beach"] .cp-root { background: #ff9a6b; border-color: #4a1c4f; box-shadow: 0 6px 0 #4a1c4f; }
+[data-skin="beach"] .cp-pcard { background: #fff3dc; color: #4a1c4f; border-color: #4a1c4f; } [data-skin="beach"] .cp-round { background: #4a1c4f; border-color: #ffe17a; }
+[data-skin="beach"] .cp-msg { background: linear-gradient(180deg, #4ad6c8, #1b8f9e); color: #fff; } [data-skin="beach"] .cp-root :is(.cp-msg, .cp-round-txt, .cp-nm, .cp-sc) { font-family: var(--font-cartoon); }
+[data-skin="space"] .cp-root { background: #02040f; border-color: #5ff3ff; box-shadow: none; }
+[data-skin="space"] .cp-pcard { background: rgba(8, 24, 56, .85); border-color: #5ff3ff; } [data-skin="space"] .cp-round { background: rgba(8, 24, 56, .85); border-color: #b48bff; }
+[data-skin="space"] .cp-msg { background: rgba(8, 24, 56, .92); color: #5ff3ff; border-color: #5ff3ff; } [data-skin="space"] .cp-root :is(.cp-msg, .cp-round-txt, .cp-nm) { font-family: var(--font-neon); font-weight: 900; }

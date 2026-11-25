@@ -23,8 +23,9 @@ const TEMPLATE = `
     <div class="lc-p them"><span class="lc-pips lc-pips-them"></span><b class="lc-name lc-name-them"></b><span class="lc-dot"></span></div>
   </header>
   <div class="lc-stage">
-    <div class="lc-pixi"></div>
-    <div class="lc-you" hidden>YOU</div>
+    <div class="lc-sky" aria-hidden="true"><i class="lc-orb"></i><svg viewBox="0 0 400 90" preserveAspectRatio="none"><path class="lc-ridge far" d="M0 90 V52 H18 V36 H40 V58 H62 V24 H84 V50 H110 V40 H128 V62 H150 V30 H166 V18 H182 V54 H214 V34 H236 V60 H258 V22 H284 V48 H306 V38 H330 V60 H352 V28 H376 V50 H400 V90 Z"/><path class="lc-ridge peak" d="M0 90 L44 34 L80 66 L136 12 L190 70 L232 40 L276 72 L330 20 L372 62 L400 44 V90 Z"/></svg></div>
+    <div class="lc-pixi"><div class="lc-you" hidden>YOU</div></div>
+    <div class="lc-streaks" aria-hidden="true"></div>
     <div class="lc-count" aria-live="assertive"></div>
     <div class="lc-msg" aria-live="polite"><div class="lc-msg-big"></div><div class="lc-msg-small"></div></div>
     <div class="lc-flash"></div>
@@ -41,6 +42,13 @@ const TEMPLATE = `
 const KEYS = {ArrowUp: UP, w: UP, W: UP, ArrowRight: RIGHT, d: RIGHT, D: RIGHT, ArrowDown: DOWN, s: DOWN, S: DOWN, ArrowLeft: LEFT, a: LEFT, A: LEFT};
 const NEON = [0xff3d7f, 0x22d3ff];          // seat A pink-red, seat B cyan: same hue families as --seat-a / --seat-b
 const NEON_CSS = ['#ff3d7f', '#22d3ff'];
+// What each skin changes in the arena itself (the sky, frame and type are CSS: tron.css and skins.css).
+const THEMES = {
+  grid: {bg: 0x05010f, floor: 0x070318, line: 0x2a2a6e, major: 0x7a5cff, edge: 0x7a5cff, mote: 0x8f7bff, rise: -14, bloom: 1.3, core: 0xffffff},
+  arctic: {bg: 0x04131f, floor: 0x0b2b3f, line: 0x1f5f7a, major: 0x8fe9ff, edge: 0xd8fbff, mote: 0xffffff, rise: 22, bloom: 1.1, core: 0xffffff},
+  inferno: {bg: 0x0d0301, floor: 0x1d0703, line: 0x5a1a08, major: 0xff6a1a, edge: 0xffb02e, mote: 0xff8a2a, rise: -34, bloom: 1.5, core: 0xfff1c4},
+};
+const WALL = 15;                              // how tall the light walls stand, in world units
 const CELL = 20;                              // world units per grid cell
 const SIZE = W * CELL;
 const ANGLE = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
@@ -71,21 +79,47 @@ export async function createGame({session, container}) {
   const world = new Container();       // scaled to fit; the camera moves this
   app.stage.addChild(world);
   const floor = new Graphics();
+  const ambient = new Container();     // motes drifting over the floor
   const glowLayer = new Container();   // everything that blooms
   const trails = [new Graphics(), new Graphics()];
   const tips = [new Graphics(), new Graphics()];
   const heads = [new Container(), new Container()];
   const sparks = new Container();
   const rings = new Graphics();
-  world.addChild(floor, glowLayer);
+  const bikeShadow = new Graphics();
+  let theme = THEMES[container.dataset.skin] ?? THEMES.grid;
+  world.addChild(floor, ambient, bikeShadow, glowLayer);
   glowLayer.addChild(...trails, ...tips, sparks, rings, ...heads);
-  glowLayer.filters = [new AdvancedBloomFilter({threshold: 0.18, bloomScale: 1.3, brightness: 1.05, blur: 6, quality: 3, resolution: 1})];
+  const bloom = new AdvancedBloomFilter({threshold: 0.18, bloomScale: 1.3, brightness: 1.05, blur: 6, quality: 3, resolution: 1});
+  glowLayer.filters = [bloom];
 
   drawFloor(floor);
   heads.forEach((h, i) => h.addChild(bikeShape(i)));
 
   const dot = new Graphics().circle(0, 0, 8).fill(0xffffff);
   const dotTex = app.renderer.generateTexture(dot);
+  const motes = Array.from({length: calm() ? 0 : 26}, () => {
+    const s = new Sprite(dotTex);
+    s.anchor.set(0.5); s.blendMode = 'add'; s.position.set(Math.random() * SIZE, Math.random() * SIZE);
+    const m = {s, v: 0.5 + Math.random(), p: Math.random() * 6.28, sc: 0.1 + Math.random() * 0.16};
+    ambient.addChild(s);
+    return m;
+  });
+  function stepMotes(now, dt) {
+    for (const m of motes) {
+      m.s.y = (m.s.y + theme.rise * m.v * dt + SIZE) % SIZE;
+      m.s.x += Math.sin(now / 900 + m.p) * 6 * dt;
+      m.s.alpha = 0.25 + 0.35 * Math.sin(now / 500 + m.p) ** 2;
+    }
+  }
+  function applyTheme() {
+    theme = THEMES[container.dataset.skin] ?? THEMES.grid;
+    app.renderer.background.color = theme.bg;
+    bloom.bloomScale = theme.bloom;
+    floor.clear(); drawFloor(floor);
+    for (const m of motes) { m.s.tint = theme.mote; m.s.scale.set(m.sc); }
+    drawnLen = [-1, -1];
+  }
   const parts = [];                    // {s: Sprite, vx, vy, life, age, drag}
 
   function emit(x, y, color, {n = 1, speed = 60, life = 0.5, size = 0.35, spread = Math.PI * 2, angle = 0, drag = 2.5} = {}) {
@@ -167,14 +201,27 @@ export async function createGame({session, container}) {
     g.clear();
     if (path.length < 2) return;
     const pts = path.map(cellCenter);
-    const line = (width, color, alpha) => {
-      g.moveTo(pts[0][0], pts[0][1]);
-      for (let k = 1; k < pts.length - 1; k++) g.lineTo(pts[k][0], pts[k][1]);
-      g.stroke({width, color, alpha: alpha * derez, cap: 'round', join: 'round'});
-    };
-    line(CELL * 0.95, NEON[i], 0.22);
-    line(CELL * 0.5, NEON[i], 0.95);
-    line(CELL * 0.14, 0xffffff, 0.9);
+    const body = pts.slice(0, -1);
+    if (body.length < 2) return;
+    // Straight runs only, farthest first, so nearer walls stand in front of those behind them.
+    const runs = [];
+    let a = body[0];
+    for (let k = 1; k < body.length; k++) {
+      const last = k === body.length - 1;
+      const bend = !last && (body[k + 1][0] - body[k][0] !== body[k][0] - body[k - 1][0] || body[k + 1][1] - body[k][1] !== body[k][1] - body[k - 1][1]);
+      if (bend || last) { runs.push([a, body[k]]); a = body[k]; }
+    }
+    runs.sort((p, q) => Math.max(p[0][1], p[1][1]) - Math.max(q[0][1], q[1][1]));
+    for (const [p, q] of runs) g.moveTo(...p).lineTo(...q).stroke({width: CELL * 1.1, color: NEON[i], alpha: 0.16 * derez, cap: 'round'}); // light spilling on the floor
+    for (const [p, q] of runs) wall(g, p, q, NEON[i], derez);
+  }
+
+  /** One stretch of light wall: a translucent face standing on the floor with a bright top edge. */
+  function wall(g, p, q, color, k = 1) {
+    if (p[1] === q[1]) g.poly([p[0], p[1], q[0], q[1], q[0], q[1] - WALL, p[0], p[1] - WALL]).fill({color, alpha: 0.42 * k});
+    g.moveTo(p[0], p[1]).lineTo(q[0], q[1]).stroke({width: CELL * 0.2, color, alpha: 0.9 * k, cap: 'round'});
+    g.moveTo(p[0], p[1] - WALL).lineTo(q[0], q[1] - WALL).stroke({width: p[1] === q[1] ? CELL * 0.26 : CELL * 0.4, color, alpha: k, cap: 'round'});
+    g.moveTo(p[0], p[1] - WALL).lineTo(q[0], q[1] - WALL).stroke({width: CELL * 0.1, color: theme.core, alpha: 0.95 * k, cap: 'round'});
   }
 
   /** The bike's on-screen spot: it glides from its previous cell to its current one over a tick. */
@@ -203,12 +250,10 @@ export async function createGame({session, container}) {
       tip.clear();
       if (path.length >= 2 && s.bikes[i].alive) {
         const [px, py] = cellCenter(path[path.length - 2]);
-        for (const [w, c, a] of [[CELL * 0.95, NEON[i], 0.22], [CELL * 0.5, NEON[i], 0.95], [CELL * 0.14, 0xffffff, 0.9]]) {
-          tip.moveTo(px, py).lineTo(hx, hy).stroke({width: w, color: c, alpha: a, cap: 'round'});
-        }
+        wall(tip, [px, py], [hx, hy], NEON[i]);
       }
       const h = heads[i];
-      h.position.set(hx, hy);
+      h.position.set(hx, hy - WALL * 0.45);
       h.rotation = headAngle[i];
       h.visible = s.bikes[i].alive || last.phase === 'waiting' || last.phase === 'countdown';
       if (last.phase === 'playing' && s.bikes[i].alive && Math.random() < 0.7) {
@@ -216,6 +261,9 @@ export async function createGame({session, container}) {
         emit(hx + Math.cos(back) * CELL * 0.6, hy + Math.sin(back) * CELL * 0.6, NEON[i], {n: 1, speed: 50, life: 0.35, size: 0.28, angle: back, spread: 1.1});
       }
     });
+    bikeShadow.clear();
+    s.bikes.forEach((b, i) => { if (heads[i].visible) bikeShadow.ellipse(heads[i].x, heads[i].y + WALL * 0.45, CELL * 1.3, CELL * 0.7).fill({color: NEON[i], alpha: 0.28}); });
+    stepMotes(now, dt);
     stepParts(dt);
     stepWaves(dt);
     placeYou();
@@ -240,6 +288,8 @@ export async function createGame({session, container}) {
       const k = 105 / tickMsAt(s.tick);
       engine?.speed(k);
       $('.lc-speed i').style.setProperty('--k', String(Math.min(1, (k - 1) / 0.7)));
+      $('.lc-streaks').style.opacity = String(Math.min(0.8, 0.15 + (k - 1) * 1.4));
+      if (s.tick % 22 === 0) shockwave(SIZE / 2, SIZE / 2, theme.major, SIZE * 0.6, 1.5); // a pulse runs out across the floor
     }
   }
 
@@ -386,7 +436,10 @@ export async function createGame({session, container}) {
     if (!l) return;
     engine?.stop();
     engine = null;
+    $('.lc-streaks').style.opacity = '0';
     synth.boom();
+    // Time hangs for a beat: the arena freezes, then the blast rolls on.
+    if (!calm()) { app.ticker.speed = 0.12; keep(gsap.delayedCall(0.4, () => { app.ticker.speed = 1; })); }
     const mine = l.winner === s.seat;
     const draw = l.winner === 'draw';
     vibrate(draw ? 'hit' : mine ? 'win' : 'loss');
@@ -467,31 +520,35 @@ export async function createGame({session, container}) {
   }
 
   function drawFloor(g) {
-    g.rect(0, 0, SIZE, SIZE).fill(0x070318);
+    g.rect(0, 0, SIZE, SIZE).fill(theme.floor);
     for (let k = 1; k < W; k++) {
       const major = k % 6 === 0;
       const p = k * CELL;
       g.moveTo(p, 0).lineTo(p, SIZE).moveTo(0, p).lineTo(SIZE, p);
-      g.stroke({width: major ? 1.6 : 0.8, color: major ? 0x7a5cff : 0x2a2a6e, alpha: major ? 0.55 : 0.6});
+      g.stroke({width: major ? 1.6 : 0.8, color: major ? theme.major : theme.line, alpha: major ? 0.55 : 0.6});
     }
-    g.rect(2, 2, SIZE - 4, SIZE - 4).stroke({width: 4, color: 0x7a5cff, alpha: 0.9});
+    g.rect(2, 2, SIZE - 4, SIZE - 4).stroke({width: 5, color: theme.edge, alpha: 0.95});
+    g.rect(0, -WALL, SIZE, WALL).fill({color: theme.edge, alpha: 0.22}); // the far wall stands up
   }
 
   function bikeShape(i) {
     const g = new Graphics();
-    const L = CELL * 1.5;
-    const Wd = CELL * 0.72;
-    g.roundRect(-L * 0.6, -Wd / 2, L, Wd, Wd / 2).fill(NEON[i]);
-    g.roundRect(-L * 0.6, -Wd / 2, L, Wd, Wd / 2).stroke({width: 2, color: 0xffffff, alpha: 0.9});
-    g.circle(L * 0.3, 0, Wd * 0.28).fill(0xffffff);           // headlight
-    if (i === 0) g.circle(-L * 0.15, 0, Wd * 0.22).stroke({width: 2.5, color: 0x05010f});  // seat A: a ring
-    else g.circle(-L * 0.15, 0, Wd * 0.2).fill(0x05010f);                                  // seat B: a dot
+    const L = CELL * 2.1;
+    const D = CELL * 0.78;
+    g.roundRect(-L * 0.62, -D * 0.62, L * 1.14, D * 1.24, D * 0.6).fill({color: NEON[i], alpha: 0.3});   // glow hull
+    for (const x of [-L * 0.36, L * 0.3]) g.roundRect(x - L * 0.16, -D * 0.5, L * 0.32, D, D * 0.5).fill(0x0a0616).stroke({width: 3, color: NEON[i]}); // wheels
+    g.poly([-L * 0.5, -D * 0.3, L * 0.16, -D * 0.4, L * 0.5, 0, L * 0.16, D * 0.4, -L * 0.5, D * 0.3]).fill(NEON[i]).stroke({width: 2, color: 0xffffff, alpha: 0.95});
+    g.ellipse(-L * 0.02, 0, L * 0.2, D * 0.22).fill(0x05010f);                                              // canopy
+    g.circle(L * 0.42, 0, D * 0.16).fill(0xffffff);                                                          // headlight
+    if (i === 0) g.circle(-L * 0.02, 0, D * 0.12).stroke({width: 2, color: 0xffffff}); else g.circle(-L * 0.02, 0, D * 0.1).fill(0xffffff); // seat A: ring, seat B: dot
     return g;
   }
 
   const match = new TronMatch({session, onChange: render});
   render(match.snapshot(performance.now()));
   headAngle = last.state.bikes.map((b) => ANGLE[b.d]);
+  applyTheme();
+  document.addEventListener('skinchange', applyTheme);
   fit();
   app.ticker.add(frame);
   enter(container.querySelectorAll('.lc-hud > *, .lc-pad > *'), {y: 20, stagger: 0.07});
@@ -505,6 +562,7 @@ export async function createGame({session, container}) {
       stopMusic?.();
       for (const t of tweens) t?.kill?.();
       gsap.killTweensOf(container.querySelectorAll('*'));
+      document.removeEventListener('skinchange', applyTheme);
       window.removeEventListener('keydown', onKey);
       resizer?.disconnect();
       match.destroy();
