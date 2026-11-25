@@ -23,7 +23,7 @@ import {memorySessions} from '../js/memory-transport.js';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const q = new URLSearchParams(location.search);
-const NAMES = {ttt: 'tic-tac-toe', c4: 'connect-four', dots: 'dots-and-boxes', mm: 'memory-match', bs: 'battleship', tv: 'trivia-duel'};
+const NAMES = {rps: 'rps', ttt: 'tic-tac-toe', c4: 'connect-four', dots: 'dots-and-boxes', mm: 'memory-match', bs: 'battleship', tv: 'trivia-duel'};
 const id = NAMES[q.get('game') ?? 'ttt'];
 
 if (q.get('game') === 'result') { // the room-level result moments: win, loss, draw
@@ -67,7 +67,18 @@ async function click(sel, tries = 40) {
 }
 const clickSvg = (e) => e.dispatchEvent(new MouseEvent('click', {bubbles: true}));
 
-if (id === 'tic-tac-toe') {
+if (id === 'rps') {
+  const done = (b) => /win|lose|draw/i.test(b.querySelector('.status').textContent);
+  for (const [a, b] of [['rock', 'scissors'], ['paper', 'scissors'], ['paper', 'paper']]) {
+    boxes[0].querySelector(`.move[data-move="${a}"]`).click();
+    await wait(700);
+    boxes[1].querySelector(`.move[data-move="${b}"]`).click();
+    for (let t = 0; t < 150 && !(done(boxes[0]) && done(boxes[1])); t++) await wait(100);
+    await wait(1600);
+    for (const box of boxes) box.querySelector('.next').click();
+    await wait(500);
+  }
+} else if (id === 'tic-tac-toe') {
   // whoever starts takes the top row; the other plays the middle row
   const order = [0, 3, 1, 4, 2];
   for (const i of order) { await click(`.ttt-cell[data-cell="${i}"]`); await wait(900); }

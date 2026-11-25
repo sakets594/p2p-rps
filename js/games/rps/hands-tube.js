@@ -4,6 +4,9 @@
 // finger shortens and folds over the palm like a real fist seen from the front.
 // Same stage API as hands.js / hands3d.js.
 
+import {burstAt, ringAt, screenFlash, shake, vibrate} from '../../fx.js';
+import {callout} from './rules.js';
+
 const NS = 'http://www.w3.org/2000/svg';
 const BASE_Y = 140;
 const OUTLINE = 6; // extra stroke width for the outline layer
@@ -67,6 +70,7 @@ class TubeHand {
     this.appear = 0;
     this.appearTarget = 0;
     this.resultScale = 1;
+    this.dx = this.dy = this.rot = 0; // showdown offsets: toward the middle, down, lean
     this.draw();
   }
 
@@ -135,12 +139,30 @@ class TubeHand {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const REDUCED = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ease = {
+  out: (k) => 1 - (1 - k) ** 3,
+  in: (k) => k ** 3,
+  back: (k) => { const c = 1.9; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; },
+};
+const tween = (ms, fn) => new Promise((res) => {
+  const t0 = performance.now();
+  const f = () => { const k = Math.min(1, (performance.now() - t0) / ms); fn(k); if (k < 1) requestAnimationFrame(f); else res(); };
+  f();
+});
+const COUNT = ['ROCK', 'PAPER', 'SCISSORS'];
+const CALL_COLOR = {win: '#ffd84a', lose: '#ff6b6b', draw: '#9fd0ff'};
 const PUMP_S = 0.45;
 const MIN_PUMPS = 3;
 
 export class HandStageTube {
   constructor(container) {
     this.slow = 1;
+    this.box = container;
+    container.style.position = 'relative';
+    this.call = document.createElement('div'); // the big words over the hands: ROCK, PAPER, SCISSORS, SHOOT!
+    this.call.className = 'rps-call';
+    this.call.setAttribute('aria-hidden', 'true');
+    container.append(this.call);
     this.svg = mk('svg', {viewBox: '70 10 380 330', class: 'tube-stage', role: 'img', 'aria-label': 'Rock paper scissors hands'}, container);
     this.hands = {me: new TubeHand('me'), them: new TubeHand('them')};
     this.svg.append(this.hands.me.g, this.hands.them.g);
@@ -155,13 +177,13 @@ export class HandStageTube {
 
   #place(h, side, lift) {
     const s = Math.max(0.001, h.appear) * h.resultScale;
-    const y = 40 + 60 * (1 - h.appear) - lift;
-    const tilt = 9 * (1 - 0 * h.appear);
+    const y = 40 + 60 * (1 - h.appear) - lift + h.dy;
+    const tilt = 9 + h.rot;
     const pivot = '100 250';
     h.g.style.opacity = Math.min(1, h.appear * 1.6) * (h.dim ?? 1);
     h.g.setAttribute('transform', side === 'me'
-      ? `translate(90 ${y}) rotate(${tilt} ${pivot}) translate(100 250) scale(${s}) translate(-100 -250)`
-      : `translate(430 ${y}) scale(-1 1) rotate(${tilt} ${pivot}) translate(100 250) scale(${s}) translate(-100 -250)`);
+      ? `translate(${90 + h.dx} ${y}) rotate(${tilt} ${pivot}) translate(100 250) scale(${s}) translate(-100 -250)`
+      : `translate(${430 - h.dx} ${y}) scale(-1 1) rotate(${tilt} ${pivot}) translate(100 250) scale(${s}) translate(-100 -250)`);
   }
 
   #tick() {
@@ -169,6 +191,12 @@ export class HandStageTube {
     const dt = Math.min(0.05, (now - this.last) / 1000) / this.slow;
     this.last = now;
     if (this.pumping) this.pumpT += dt;
+    const beat = Math.floor(this.pumpT / PUMP_S);
+    if (this.pumping && beat !== this.lastBeat) { // the fists hit the bottom of a pump: say the next word
+      this.lastBeat = beat;
+      this.#callout(COUNT[beat % COUNT.length], '#ffffff', 0.9);
+      if (!REDUCED) shake(this.box, 0.18);
+    }
     if (this.pending && this.pumpT >= this.pending.until) {
       this.pumping = false;
       const {resolve} = this.pending;
@@ -183,6 +211,19 @@ export class HandStageTube {
     }
   }
 
+  /** Slam a word onto the stage. `size` scales the pop. */
+  #callout(text, color, size = 1) {
+    this.call.textContent = text;
+    this.call.style.color = color;
+    this.call.style.fontSize = text.length > 12 ? 'min(5.2vw, 23px)' : 'min(8vw, 38px)'; // long lines must still fit the column
+    if (REDUCED || !this.call.animate) return;
+    this.call.animate([
+      {transform: `translateX(-50%) scale(${1 + 1.4 * size})`, opacity: 0, easing: 'cubic-bezier(.2,1.4,.4,1)'},
+      {transform: 'translateX(-50%) scale(1)', opacity: 1, offset: 0.3},
+      {transform: 'translateX(-50%) scale(1)', opacity: 1},
+    ], {duration: 320});
+  }
+
   setSlow(f) { this.slow = f; }
   #ms(n) { return n * this.slow; }
 
@@ -191,7 +232,10 @@ export class HandStageTube {
     this.pumping = false;
     this.pending = null;
     this.pumpT = 0;
+    this.lastBeat = -1;
+    this.call.textContent = '';
     for (const h of Object.values(this.hands)) {
+      h.dx = h.dy = h.rot = 0;
       h.appearTarget = 0; h.appear = 0;
       h.cur = structuredClone(POSES.open); h.setPose('open');
       this.setResult(h, null);
@@ -219,6 +263,7 @@ export class HandStageTube {
   startShake() {
     if (this.pumping) return;
     this.pumpT = 0;
+    this.lastBeat = -1;
     this.pumping = true;
   }
 
@@ -228,11 +273,63 @@ export class HandStageTube {
     const periods = REDUCED ? 1 : Math.max(MIN_PUMPS, Math.ceil(this.pumpT / PUMP_S));
     await new Promise((resolve) => { this.pending = {until: periods * PUMP_S, resolve}; });
     if (epoch !== this.epoch) return;
-    this.hands.me.setPose(mine);
-    this.hands.them.setPose(theirs);
-    await sleep(this.#ms(350));
-    if (epoch !== this.epoch) return;
-    this.setResult(this.hands.me, outcome);
-    this.setResult(this.hands.them, {win: 'lose', lose: 'win', draw: 'draw'}[outcome]);
+    await this.#showdown({mine, theirs, outcome}, epoch);
+  }
+
+  // SHOOT!: both hands wind back, slam together, freeze for a beat on impact, recoil, then the winner
+  // swells and shines while the loser is knocked back.
+  async #showdown({mine, theirs, outcome}, epoch) {
+    const {me, them} = this.hands;
+    const hands = [me, them];
+    const live = () => epoch === this.epoch;
+    this.#callout('SHOOT!', '#ffd84a', 1.3);
+    if (REDUCED) {
+      me.setPose(mine); them.setPose(theirs);
+      await sleep(350);
+    } else {
+      await tween(this.#ms(190), (k) => { const e = ease.out(k); for (const h of hands) { h.dx = -30 * e; h.dy = -14 * e; h.rot = -9 * e; } });
+      if (!live()) return;
+      me.setPose(mine); them.setPose(theirs); // the fists open as they come in
+      await tween(this.#ms(110), (k) => { const e = ease.in(k); for (const h of hands) { h.dx = -30 + 52 * e; h.dy = -14 + 22 * e; h.rot = -9 + 9 * e; } });
+      if (!live()) return;
+      this.#impact(outcome, mine, theirs);
+      await sleep(this.#ms(110)); // hit-stop: everything holds for a beat
+      if (!live()) return;
+      const knock = outcome === 'draw' ? 0 : 1;
+      await tween(this.#ms(420), (k) => {
+        const e = ease.back(k);
+        for (const h of hands) { h.dx = 22 * (1 - e); h.dy = 8 * (1 - e); }
+        const loser = outcome === 'win' ? them : outcome === 'lose' ? me : null;
+        if (loser) { loser.dx = 22 * (1 - e) - 16 * knock * ease.out(k); loser.rot = -22 * ease.out(k); loser.dy = 8 * (1 - e) + 26 * ease.out(k); }
+      });
+      if (!live()) return;
+    }
+    this.setResult(me, outcome);
+    this.setResult(them, {win: 'lose', lose: 'win', draw: 'draw'}[outcome]);
+    this.#aftermath(outcome);
+    await sleep(this.#ms(450));
+  }
+
+  #impact(outcome, mine, theirs) {
+    this.#callout(callout(mine, theirs), CALL_COLOR[outcome], 1);
+    screenFlash('#ffffff', 0.6, 240);
+    ringAt(this.svg, '#ffffff', {count: 3, size: 0.22});
+    burstAt(this.svg, 'bigBoom');
+    shake(this.box, 1.2);
+    vibrate('hit');
+  }
+
+  #aftermath(outcome) {
+    const {me, them} = this.hands;
+    if (outcome === 'draw') {
+      ringAt(this.svg, '#9fd0ff', {count: 2, size: 0.4});
+      return;
+    }
+    const [winner, loser] = outcome === 'win' ? [me, them] : [them, me];
+    burstAt(winner.g, 'sparkle');
+    burstAt(winner.g, 'sparkle');
+    ringAt(winner.g, '#ffd84a', {count: 2, size: 0.5});
+    burstAt(loser.g, 'smoke');
+    if (outcome === 'win') { vibrate('good'); } else { vibrate('bad'); screenFlash('#ff2d2d', 0.3, 500); }
   }
 }

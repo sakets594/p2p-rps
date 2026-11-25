@@ -32,8 +32,10 @@ export function soundsForChange(prev, next, getGame = findGame) {
   if (now && now.sid !== was?.sid) out.push('game.start');
   if (now && was && now.sid === was.sid) {
     if (prev.away !== next.away) out.push(next.away ? 'game.friend_away' : 'game.friend_back');
-    if (now.result && !was.result && !getGame(now.gameId)?.ownsResultSound) {
-      out.push(resultScenario(now.result, next.selfId));
+    // next.result, not now.result: the session object is shared by every snapshot, so its result is
+    // already set when the previous snapshot is looked at afterwards.
+    if (next.result && !prev.result && !getGame(now.gameId)?.ownsResultSound) {
+      out.push(resultScenario(next.result, next.selfId));
     }
   }
   return out;

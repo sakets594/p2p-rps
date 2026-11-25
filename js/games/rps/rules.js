@@ -15,6 +15,15 @@ export function resolve(mine, theirs) {
   return BEATS[mine] === theirs ? 'win' : 'lose';
 }
 
+const VERBS = {rock: 'CRUSHES', paper: 'COVERS', scissors: 'CUT'};
+
+/** The words for the moment of impact: "ROCK CRUSHES SCISSORS", or "ROCK vs ROCK: DRAW!". */
+export function callout(mine, theirs) {
+  if (mine === theirs) return `${mine.toUpperCase()} vs ${theirs.toUpperCase()}: DRAW!`;
+  const [winner, loser] = BEATS[mine] === theirs ? [mine, theirs] : [theirs, mine];
+  return `${winner.toUpperCase()} ${VERBS[winner]} ${loser.toUpperCase()}`;
+}
+
 const preimage = ({roomId, round, move, nonce}) => `rps|${roomId}|${round}|${move}|${nonce}`;
 
 export async function makeCommit({roomId, round, move, nonce = randomNonce()}) {

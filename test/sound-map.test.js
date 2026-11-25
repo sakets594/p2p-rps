@@ -61,3 +61,17 @@ test('sound map: every mapped clip is committed under assets/sfx (run `npm run s
   const root = new URL('../assets/sfx/', import.meta.url);
   for (const clip of allClips()) assert.ok(existsSync(new URL(clip, root)), clip);
 });
+
+test('sound map: chance, when given, is a real probability; maxSecs is positive', () => {
+  for (const id of scenarioIds()) {
+    const {chance = 1, maxSecs = 1} = SCENARIOS[id];
+    assert.ok(chance > 0 && chance <= 1, `${id} chance`);
+    assert.ok(maxSecs > 0 && maxSecs <= 10, `${id} maxSecs`);
+  }
+});
+
+test('sound map: frequent, low-chance moments use short caps so they never drag', () => {
+  for (const id of scenarioIds()) {
+    if ((SCENARIOS[id].chance ?? 1) <= 0.2) assert.ok((SCENARIOS[id].maxSecs ?? 99) <= 2, id);
+  }
+});

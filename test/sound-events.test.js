@@ -1,10 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync, readdirSync} from 'node:fs';
+import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {matchEndScenario, resultScenario, soundsForChange, throwScenario} from '../js/sound-events.js';
 import {SCENARIOS} from '../js/sound-map.js';
+import {Room} from '../js/room.js';
+import {MemoryNetwork, settle} from '../js/memory-transport.js';
 
-const snap = (over = {}) => ({phase: 'idle', selfId: 'me', session: null, away: false, notice: null, ...over});
-const session = (over = {}) => ({sid: 's1', gameId: 'rps', result: null, ...over});
+const snap = (over = {}) => ({phase: 'idle', selfId: 'me', session: null, result: null, away: false, notice: null, ...over});
+const session = (over = {}) => ({sid: 's1', gameId: 'rps', ...over});
 
 test('friend joins and leaves the room', () => {
   assert.deepEqual(soundsForChange(snap({phase: 'waiting'}), snap({phase: 'idle'})), ['room.friend_joined']);
@@ -31,7 +36,7 @@ test('a game starting is heard once, not on every later snapshot', () => {
 
 test('a finished game: won, lost or draw, from my side', () => {
   const before = snap({phase: 'playing', session: session()});
-  const after = (result) => snap({phase: 'playing', session: session({result})});
+  const after = (result) => snap({phase: 'playing', session: session(), result});
   assert.deepEqual(soundsForChange(before, after({winnerId: 'me'})), ['game.won']);
   assert.deepEqual(soundsForChange(before, after({winnerId: 'them'})), ['game.lost']);
   assert.deepEqual(soundsForChange(before, after({})), ['game.draw']);
@@ -40,7 +45,7 @@ test('a finished game: won, lost or draw, from my side', () => {
 test('a game that plays its own result sound is not doubled by the room', () => {
   const getGame = () => ({ownsResultSound: true});
   const before = snap({phase: 'playing', session: session()});
-  const after = snap({phase: 'playing', session: session({result: {winnerId: 'me'}})});
+  const after = snap({phase: 'playing', session: session(), result: {winnerId: 'me'}});
   assert.deepEqual(soundsForChange(before, after, getGame), []);
 });
 
@@ -74,14 +79,63 @@ test('cup pong match end: all cups only for the winner who cleared them', () => 
   assert.equal(matchEndScenario({winner: null, reason: 'rounds'}, 0), 'game.draw');
 });
 
-test('every scenario the code can ask for exists in the sound map', () => {
-  const asked = [
-    'room.friend_joined', 'room.friend_left', 'room.invite_received', 'room.invite_declined', 'game.error',
-    'game.start', 'game.friend_away', 'game.friend_back', 'game.won', 'game.lost', 'game.draw',
-    'rps.round_won', 'rps.round_lost', 'rps.round_draw', 'rps.friend_waiting', 'rps.cheat_detected',
-    'cp.my_hit', 'cp.their_hit', 'cp.my_miss', 'cp.their_miss', 'cp.bounce_hit', 'cp.near_miss', 'cp.extra_turn', 'cp.all_cups',
-  ];
-  for (const id of asked) assert.ok(SCENARIOS[id], id);
-  assert.deepEqual(Object.keys(SCENARIOS).sort(), [...asked].sort(), 'a mapped scenario nothing ever plays');
+// Static check, so a typo'd id (silent at runtime) or a mapped scenario nothing plays cannot slip in:
+// every quoted 'scope.moment' in the code must be a mapped scenario, and every scenario must be used.
+test('every scenario id in the code is mapped, and every mapped scenario is used by the code', () => {
+  const files = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, {withFileTypes: true})) {
+      const path = join(dir, e.name);
+      if (e.isDirectory()) walk(path);
+      else if (e.name.endsWith('.js') && e.name !== 'sound-map.js') files.push(path);
+    }
+  };
+  walk(fileURLToPath(new URL('../js/', import.meta.url)));
+  const scopes = new Set(Object.keys(SCENARIOS).map((id) => id.split('.')[0]));
+  const used = new Set();
+  const unknown = [];
+  for (const file of files) {
+    for (const [, id] of readFileSync(file, 'utf8').matchAll(/'([a-z]+\.[a-z_]+)'/g)) {
+      if (!scopes.has(id.split('.')[0])) continue; // 'index.js', 'hands.js'...: not a scenario
+      if (SCENARIOS[id]) used.add(id);
+      else if (!/\.(js|css)$/.test(id)) unknown.push(`${file}: ${id}`);
+    }
+  }
+  assert.deepEqual(unknown, [], 'ids the code plays that the map does not have');
+  assert.deepEqual(Object.keys(SCENARIOS).filter((id) => !used.has(id)), [], 'mapped scenarios nothing plays');
   assert.equal(resultScenario({winnerId: 'a'}, 'a'), 'game.won');
+});
+
+// The room hands every snapshot the same live session object and sets `result` on it in place, so a
+// detector that compares prev.session.result to next.session.result sees the result "already there".
+// Unit tests with hand-made snapshots cannot catch that; this one uses two real rooms.
+test('real room: the winner hears game.won, the loser game.lost, and a draw is a draw', async () => {
+  for (const [result, mine, theirs] of [
+    [{winnerId: 'alice'}, 'game.won', 'game.lost'],
+    [{winnerId: 'bob'}, 'game.lost', 'game.won'],
+    [{}, 'game.draw', 'game.draw'],
+  ]) {
+    const net = new MemoryNetwork();
+    const heard = {alice: [], bob: []};
+    const rooms = {};
+    for (const id of ['alice', 'bob']) {
+      let prev = null;
+      const transport = net.createPeer(id);
+      rooms[id] = {transport, room: new Room({
+        transport, roomId: 'ABC123', name: id,
+        getGame: () => ({id: 'ttt', title: 'T', status: 'ready', minPlayers: 2, maxPlayers: 2}),
+        onChange: (snap) => { heard[id].push(...soundsForChange(prev, snap)); prev = snap; },
+      })};
+    }
+    rooms.alice.transport.join(); rooms.bob.transport.join();
+    await settle();
+    rooms.alice.room.propose('ttt'); await settle();
+    rooms.bob.room.accept(); await settle();
+    rooms.alice.room.snapshot().session.finished(result); // what TurnMatch does when the game ends
+    rooms.bob.room.snapshot().session.finished(result);
+    await settle();
+    assert.ok(heard.alice.includes('game.start'), 'start sound');
+    assert.deepEqual(heard.alice.filter((x) => /^game\.(won|lost|draw)$/.test(x)), [mine], 'alice');
+    assert.deepEqual(heard.bob.filter((x) => /^game\.(won|lost|draw)$/.test(x)), [theirs], 'bob');
+  }
 });

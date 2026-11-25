@@ -32,6 +32,13 @@
 
   /* Game surfaces */
   --hole: var(--bg);        /* an empty slot cut into a board */
+  --paper: #ffffff;         /* always white: QR codes, marks and outlines that must read on any ground */
+  --veil: rgba(29, 27, 46, .14);   /* a hover wash over a board */
+  --shade: rgba(29, 27, 46, .22);  /* the inner shadow of a hole or the underside of a piece */
+  --shine: rgba(255, 255, 255, .35); /* the highlight on top of a piece */
+  --mark: rgba(255, 255, 255, .92);  /* the ring / dot that tells the two seats apart */
+  --gold-hot: #ffb703; --gold-soft: #ffe27a; /* glow colors for a win */
+  --drop-shadow: rgba(0, 0, 0, .35);
 
   /* Shape and depth */
   --r-sm: 8px; --r-md: 14px; --r-lg: 22px; --r-pill: 999px;

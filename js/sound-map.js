@@ -9,12 +9,16 @@
 //          Hollywood references.
 //   when   the moment, in words, and where the game can detect it
 //   tier   1 = ship first, 2 = nice to have once tier 1 feels right
+//   chance   optional, 0..1 (default 1): how often the moment makes a sound at all. Frequent moments
+//          (an ordinary move) use a low chance so the memes stay a treat, not noise.
 //   maxSecs  optional: play at most this long, then fade out (default DEFAULT_MAX_SECS).
 //          Short reactions fire often; only the big moments get a long clip.
 //
 // Source library: /Users/saket/workspace/assets/meme-music (dataset.json has duration and mood).
 // Scenario ids are '<scope>.<moment>': 'game.*' fires from the room for any game (it only needs
-// session.finished), 'rps.*' and 'cp.*' (cup pong) fire from that game's own module.
+// session.finished); every other scope fires from that game's own module: rps, cp (cup pong),
+// board (the turn-based board games), mm (memory match), db (dots and boxes), bs (battleship),
+// hm (hangman), tv (trivia duel). A final move plays only the room's game.won/lost/draw, never both.
 
 export const SCENARIOS = {
   // --- Room ---------------------------------------------------------------------------
@@ -175,6 +179,273 @@ export const SCENARIOS = {
     desi: ['kgf_theme_bgm', 'systumm_faad_denge', 'jalwa_hai_hamara'],
     en: ['airhorn_rap'],
   },
+  // --- Turn-based board games: tic-tac-toe, connect four, dots and boxes, memory match -------
+  'board.my_move': {
+    when: 'I place a mark, drop a disc or draw a line (not the move that ends the game)',
+    tier: 2,
+    chance: 0.2,
+    maxSecs: 2,
+    desi: ['jalwa_hai_hamara', 'kaisa_laga_mera_mazaak', 'shabaash_beta'],
+    en: ['lil_jon_okay'],
+  },
+  'board.their_move': {
+    when: 'The friend makes a move (not the one that ends the game)',
+    tier: 2,
+    chance: 0.2,
+    maxSecs: 2,
+    desi: ['kya_gunda_banega_re_tu', 'kehna_kya_chahte_ho', 'overacting_50_rupaye_kat'],
+    en: ['bruh_sound_effect'],
+  },
+  'board.slow_move': {
+    when: 'It has been my turn for 25 seconds and I have not moved',
+    tier: 1,
+    desi: ['jaldi_bol_panvel', 'kya_kar_raha_hai_tu', 'kehna_kya_chahte_ho'],
+    en: [],
+  },
+
+  // --- Memory Match -------------------------------------------------------------------
+  'mm.my_match': {
+    when: 'I flip a matching pair',
+    tier: 1,
+    maxSecs: 3,
+    desi: ['moj_kardi_waah_bete', 'shabaash_beta', 'miracle_miracle', 'jalwa_hai_hamara'],
+    en: ['noice_click'],
+  },
+  'mm.their_match': {
+    when: 'The friend finds a pair',
+    tier: 1,
+    maxSecs: 3,
+    desi: ['maro_mujhe_maro', 'khopdi_tod_saale_ka', 'ekdum_se_waqt_badal_diya'],
+    en: ['roblox_oof'],
+  },
+  'mm.combo': {
+    when: 'I find two or more pairs in a row (plays instead of mm.my_match)',
+    tier: 1,
+    maxSecs: 4,
+    desi: ['paisa_hi_paisa_hoga', 'systumm_faad_denge', 'jalwa_hai_hamara'],
+    en: ['airhorn_rap'],
+  },
+  'mm.my_miss': {
+    when: 'My two cards do not match',
+    tier: 1,
+    chance: 0.7,
+    maxSecs: 2.5,
+    desi: ['kehna_kya_chahte_ho', 'tmkoc_game_over', 'kya_gunda_banega_re_tu'],
+    en: ['bruh_sound_effect'],
+  },
+  'mm.their_miss': {
+    when: 'The friend\'s two cards do not match',
+    tier: 2,
+    chance: 0.5,
+    maxSecs: 2.5,
+    desi: ['nana_patekar_laugh', 'shabaash_beta', 'kaisa_laga_mera_mazaak'],
+    en: [],
+  },
+
+  // --- Dots and Boxes -----------------------------------------------------------------
+  'db.my_box': {
+    when: 'I close a box (and move again)',
+    tier: 1,
+    maxSecs: 2.5,
+    desi: ['jalwa_hai_hamara', 'moj_kardi_waah_bete', 'shabaash_beta', 'kaisa_laga_mera_mazaak'],
+    en: ['lil_jon_okay'],
+  },
+  'db.their_box': {
+    when: 'The friend closes a box',
+    tier: 1,
+    maxSecs: 2.5,
+    desi: ['maro_mujhe_maro', 'khopdi_tod_saale_ka', 'ekdum_se_waqt_badal_diya'],
+    en: ['roblox_oof'],
+  },
+
+  // --- Battleship ---------------------------------------------------------------------
+  'bs.battle_start': {
+    when: 'Both fleets are locked in and the shooting begins',
+    tier: 1,
+    maxSecs: 4,
+    desi: ['systumm_faad_denge', 'khopdi_tod_saale_ka', 'kgf_theme_bgm'],
+    en: ['airhorn_rap'],
+  },
+  'bs.my_miss': {
+    when: 'My shot hits only water',
+    tier: 1,
+    maxSecs: 2.5,
+    desi: ['kehna_kya_chahte_ho', 'tmkoc_game_over', 'kya_gunda_banega_re_tu'],
+    en: ['bruh_sound_effect', 'sad_trombone_fail'],
+  },
+  'bs.my_hit': {
+    when: 'My shot hits a ship',
+    tier: 1,
+    maxSecs: 3,
+    desi: ['jalwa_hai_hamara', 'moj_kardi_waah_bete', 'kaisa_laga_mera_mazaak', 'shabaash_beta'],
+    en: ['lil_jon_okay', 'vine_boom_sound'],
+  },
+  'bs.my_sunk': {
+    when: 'My shot sinks a whole ship (not the last one)',
+    tier: 1,
+    maxSecs: 5,
+    desi: ['kgf_theme_bgm', 'paisa_hi_paisa_hoga', 'systumm_faad_denge', 'miracle_miracle'],
+    en: ['airhorn_rap'],
+  },
+  'bs.their_miss': {
+    when: 'The friend\'s shot misses my fleet',
+    tier: 1,
+    maxSecs: 2.5,
+    desi: ['nana_patekar_laugh', 'shabaash_beta', 'overacting_50_rupaye_kat'],
+    en: [],
+  },
+  'bs.their_hit': {
+    when: 'The friend hits one of my ships',
+    tier: 1,
+    maxSecs: 3,
+    desi: ['maro_mujhe_maro', 'khopdi_tod_saale_ka', 'ekdum_se_waqt_badal_diya'],
+    en: ['roblox_oof', 'emotional_damage'],
+  },
+  'bs.their_sunk': {
+    when: 'The friend sinks one of my ships (not my last one)',
+    tier: 1,
+    maxSecs: 5,
+    desi: ['moye_moye_chorus', 'tmkoc_game_over', 'maro_mujhe_maro', 'ekdum_se_waqt_badal_diya'],
+    en: ['sad_trombone_fail', 'emotional_damage'],
+  },
+
+  // --- Hangman (the guesser calls letters, the setter watches) -------------------------
+  'hm.right_mine': {
+    when: 'I guessed a letter that is in the word',
+    tier: 1,
+    maxSecs: 2.5,
+    desi: ['shabaash_beta', 'jalwa_hai_hamara', 'kaisa_laga_mera_mazaak'],
+    en: ['noice_click'],
+  },
+  'hm.wrong_mine': {
+    when: 'I guessed a letter that is not in the word',
+    tier: 1,
+    maxSecs: 2.5,
+    desi: ['kya_gunda_banega_re_tu', 'kehna_kya_chahte_ho', 'tmkoc_game_over'],
+    en: ['bruh_sound_effect'],
+  },
+  'hm.friend_right': {
+    when: 'The friend guessed a letter of my word',
+    tier: 1,
+    maxSecs: 2.5,
+    desi: ['maro_mujhe_maro', 'kehna_kya_chahte_ho', 'khopdi_tod_saale_ka'],
+    en: ['roblox_oof'],
+  },
+  'hm.friend_wrong': {
+    when: 'The friend guessed a letter that is not in my word',
+    tier: 1,
+    maxSecs: 2.5,
+    desi: ['nana_patekar_laugh', 'kaisa_laga_mera_mazaak', 'shabaash_beta'],
+    en: [],
+  },
+  'hm.round_won': {
+    when: 'I won the round (word found, or the friend was hanged); not the last round',
+    tier: 1,
+    maxSecs: 5,
+    desi: ['moj_kardi_waah_bete', 'paisa_hi_paisa_hoga', 'jalwa_hai_hamara', 'miracle_miracle'],
+    en: ['airhorn_rap'],
+  },
+  'hm.round_lost': {
+    when: 'I lost the round; not the last round',
+    tier: 1,
+    maxSecs: 5,
+    desi: ['moye_moye_chorus', 'tmkoc_game_over', 'maro_mujhe_maro'],
+    en: ['sad_trombone_fail'],
+  },
+
+  // --- Draw & Guess / Blind Draw ------------------------------------------------------
+  'dg.right_mine': {
+    when: 'I guessed the drawing (not the last round)',
+    tier: 1,
+    maxSecs: 3,
+    desi: ['shabaash_beta', 'jalwa_hai_hamara', 'kaisa_laga_mera_mazaak'],
+    en: ['noice_click'],
+  },
+  'dg.friend_right': {
+    when: 'The friend guessed my drawing (not the last round)',
+    tier: 1,
+    maxSecs: 3,
+    desi: ['moj_kardi_waah_bete', 'jalwa_hai_hamara'],
+    en: ['airhorn_rap'],
+  },
+  'dg.time_up': {
+    when: 'Time ran out and nobody guessed it (not the last round)',
+    tier: 1,
+    maxSecs: 4,
+    desi: ['moye_moye_chorus', 'tmkoc_game_over'],
+    en: ['sad_trombone_fail'],
+  },
+
+  // --- Light Cycles ---------------------------------------------------------------------
+  'tr.round_won': {
+    when: 'My bike outlasted the friend\'s (not the last round)',
+    tier: 1,
+    maxSecs: 4,
+    desi: ['moj_kardi_waah_bete', 'jalwa_hai_hamara'],
+    en: ['airhorn_rap'],
+  },
+  'tr.round_lost': {
+    when: 'I crashed first (not the last round)',
+    tier: 1,
+    maxSecs: 4,
+    desi: ['moye_moye_chorus', 'tmkoc_game_over'],
+    en: ['sad_trombone_fail'],
+  },
+
+  // --- Quick Draw -----------------------------------------------------------------------
+  'qd.round_won': {
+    when: 'I fired first and won the duel (not the last one)',
+    tier: 1,
+    maxSecs: 4,
+    desi: ['shabaash_beta', 'jalwa_hai_hamara', 'moj_kardi_waah_bete'],
+    en: ['airhorn_rap'],
+  },
+  'qd.round_lost': {
+    when: 'The friend fired first, or I jumped the gun (not the last duel)',
+    tier: 1,
+    maxSecs: 4,
+    desi: ['moye_moye_chorus', 'kya_gunda_banega_re_tu', 'tmkoc_game_over'],
+    en: ['sad_trombone_fail', 'bruh_sound_effect'],
+  },
+
+  // --- Trivia Duel --------------------------------------------------------------------
+  'tv.right': {
+    when: 'My answer was right (not the last question)',
+    tier: 1,
+    maxSecs: 3,
+    desi: ['shabaash_beta', 'moj_kardi_waah_bete', 'jalwa_hai_hamara', 'miracle_miracle'],
+    en: ['noice_click', 'lil_jon_okay'],
+  },
+  'tv.wrong': {
+    when: 'My answer was wrong (not the last question)',
+    tier: 1,
+    maxSecs: 3,
+    desi: ['tmkoc_game_over', 'kya_gunda_banega_re_tu', 'maro_mujhe_maro'],
+    en: ['bruh_sound_effect', 'sad_trombone_fail'],
+  },
+  'tv.timeout': {
+    when: 'I ran out of time without answering (not the last question)',
+    tier: 1,
+    maxSecs: 3,
+    desi: ['jaldi_bol_panvel', 'kya_kar_raha_hai_tu', 'kehna_kya_chahte_ho'],
+    en: ['bruh_sound_effect'],
+  },
+  'tv.streak': {
+    when: 'My second right answer in a row, or more (plays instead of tv.right)',
+    tier: 1,
+    maxSecs: 4,
+    desi: ['systumm_faad_denge', 'paisa_hi_paisa_hoga', 'jalwa_hai_hamara'],
+    en: ['airhorn_rap'],
+  },
+  'tv.hurry': {
+    when: 'Four seconds left on the clock and I have not answered',
+    tier: 2,
+    chance: 0.6,
+    maxSecs: 3,
+    desi: ['jaldi_bol_panvel', 'kehna_kya_chahte_ho'],
+    en: [],
+  },
+
   // A hit that fills the extra-turn condition plays cp.extra_turn instead of cp.my_hit, so one
   // clip covers the moment. The friend's bounce shots and extra turns just play cp.their_hit.
   // Deliberately silent: 'TURN SWITCH' and round changes. They happen every few seconds.
@@ -204,6 +475,11 @@ export const DEFAULT_MAX_SECS = 4.5;
 /** Longest a scenario's clip may play before fading out. */
 export function maxSecsFor(scenarioId) {
   return SCENARIOS[scenarioId]?.maxSecs ?? DEFAULT_MAX_SECS;
+}
+
+/** How often a scenario makes a sound when its moment happens, 0..1. */
+export function chanceFor(scenarioId) {
+  return SCENARIOS[scenarioId]?.chance ?? 1;
 }
 
 export function scenarioIds() {

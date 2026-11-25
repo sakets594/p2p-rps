@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createPlayer} from '../js/sound.js';
-import {clipsFor, DEFAULT_MAX_SECS, maxSecsFor} from '../js/sound-map.js';
+import {chanceFor, clipsFor, DEFAULT_MAX_SECS, maxSecsFor} from '../js/sound-map.js';
 
 // A fake audio engine that records what was started and stopped.
 function fakeEngine({duration = 2} = {}) {
@@ -18,7 +18,11 @@ function fakeEngine({duration = 2} = {}) {
         buffer: null,
         connect() {},
         start() { log.started.push(src); },
-        stop(t) { log.stopped.push({src, t}); },
+        // Firefox throws if a source is stopped before it was started; Chrome lets it through, so the fake is strict.
+        stop(t) {
+          if (!log.started.includes(src)) throw new Error('InvalidStateError: Start has not been called');
+          log.stopped.push({src, t});
+        },
       };
       return src;
     },
@@ -122,4 +126,25 @@ test('unlock: wakes the audio engine and preloads every mapped clip', async () =
   await new Promise((r) => setTimeout(r, 20));
   assert.equal(e.log.resumed, 1);
   assert.equal(new Set(e.log.loaded).size, 31);
+});
+
+test('chance: a low-chance moment is usually silent, and plays when the dice allow', async () => {
+  assert.ok(chanceFor('board.my_move') < 1);
+  const e = fakeEngine();
+  const quiet = createPlayer({makeContext: () => e.ctx, load: e.load, rng: () => 0.9});
+  assert.equal(quiet.play('board.my_move'), null);
+  await tick();
+  assert.equal(e.log.started.length, 0);
+
+  const lucky = createPlayer({makeContext: () => e.ctx, load: e.load, rng: () => 0});
+  assert.ok(lucky.play('board.my_move'));
+  await tick();
+  assert.equal(e.log.started.length, 1);
+});
+
+test('chance: moments without one always play', () => {
+  assert.equal(chanceFor('cp.my_hit'), 1);
+  assert.equal(chanceFor('nope.nothing'), 1);
+  const p = createPlayer({makeContext: () => fakeEngine().ctx, load: async () => new ArrayBuffer(0), rng: () => 0.99});
+  assert.ok(p.play('cp.my_hit'));
 });

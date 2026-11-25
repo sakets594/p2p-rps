@@ -94,6 +94,9 @@ export class Room {
         from: this.#pending.from === this.#opponentId ? 'them' : 'me',
       },
       session: this.#session,
+      // The session object is live (the game sets .result on it later), so a snapshot of "did the game
+      // just finish?" needs its own copy of the reference: compare this, not session.result.
+      result: this.#session?.result ?? null,
       away: this.#awayId !== null,
       notice: this.#notice,
     };

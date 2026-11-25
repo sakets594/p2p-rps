@@ -18,6 +18,7 @@ export const FX_PARAMS = {
   shakePx: 9,       // loss shake distance, px
   shakeMs: 420,     // loss shake length, ms
   haptics: true,    // vibrate on phones that can
+  canvasDensity: 1, // effects canvas pixels per CSS pixel (1 = plenty for particles; 2 on a retina screen is 4x the pixels to fill)
 };
 
 const PALETTE = ['#4f46e5', '#e11d74', '#16a34a', '#f59e0b', '#06b6d4', '#a855f7'];
@@ -199,19 +200,39 @@ function frame(now) {
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   if (parts.length || rings.length) raf = requestAnimationFrame(frame);
-  else { raf = 0; canvas.remove(); canvas = ctx = null; }
+  else raf = 0; // the canvas stays in the page, cleared: hiding and re-showing a screen-sized canvas costs a layer rebuild
 }
 
 function ensureCanvas() {
-  if (canvas) return;
-  canvas = document.createElement('canvas');
-  const dpr = Math.min(2, devicePixelRatio || 1);
-  canvas.width = Math.round(innerWidth * dpr);
-  canvas.height = Math.round(innerHeight * dpr);
-  canvas.setAttribute('aria-hidden', 'true');
-  canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1000';
-  document.body.append(canvas);
-  ctx = canvas.getContext('2d');
+  const dpr = Math.min(FX_PARAMS.canvasDensity, devicePixelRatio || 1);
+  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.setAttribute('aria-hidden', 'true');
+    canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1000';
+    document.body.append(canvas);
+    ctx = canvas.getContext('2d');
+  }
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; } // the window was resized (this also clears it)
+}
+
+let warmed = false;
+/**
+ * Do the one-time costs of the first big effect now, while nothing is happening: make the screen-sized canvas,
+ * paint one frame on it, and load the emoji font the banners use. Call it once a game starts.
+ */
+export function warmUp() {
+  if (warmed || typeof document === 'undefined' || reduced()) return;
+  warmed = true;
+  const run = () => {
+    ensureCanvas();
+    ctx.fillRect(0, 0, 1, 1);
+    ctx.clearRect(0, 0, 1, 1);
+    const probe = overlay('left:-9999px;top:0;font:900 40px system-ui,sans-serif');
+    probe.textContent = '🏆💀🤝🔥';
+    requestAnimationFrame(() => requestAnimationFrame(() => probe.remove()));
+  };
+  (globalThis.requestIdleCallback ?? ((f) => setTimeout(f, 300)))(run);
 }
 
 const MAX_PARTS = 700; // a flurry of quick moves must not slow the page down
@@ -317,7 +338,7 @@ function overlay(css) {
 export function floatText(el, text, {color = '#ffffff', size = 22} = {}) {
   const c = centerOf(el);
   if (!c) return;
-  const d = overlay(`left:${c.x}px;top:${c.y}px;z-index:1002;font:900 ${size}px system-ui,sans-serif;letter-spacing:.04em;white-space:nowrap;color:${color};text-shadow:0 2px 0 rgba(0,0,0,.45),0 0 12px ${color}`);
+  const d = overlay(`left:${c.x}px;top:${c.y}px;z-index:1002;font:900 ${size}px system-ui,sans-serif;letter-spacing:.04em;white-space:nowrap;color:${color};text-shadow:0 2px 0 rgba(0,0,0,.45)`);
   d.textContent = text;
   const move = reduced() ? 0 : 1;
   d.animate([
@@ -344,15 +365,20 @@ const BANNERS = {
 export function banner(kind) {
   const b = BANNERS[kind];
   if (!b) return;
-  const wrap = overlay('inset:0;z-index:1001;display:grid;place-items:center;overflow:hidden');
+  // The dim backdrop and the text are two separate overlays, not parent and child. With the text inside the fading
+  // full-screen layer, Chrome had to composite that whole retina-size group offscreen on every frame (a win lost
+  // ~185 ms in 3 s); as siblings each animates on its own and the cost is gone.
+  const wrap = overlay('inset:0;z-index:1001');
   wrap.style.background = `radial-gradient(circle at center,rgba(0,0,0,.62) 0%,rgba(0,0,0,.45) 25%,${b.glow} 55%,transparent 78%)`; // dark center so the text always reads
-  const label = document.createElement('div');
-  label.style.cssText = `text-align:center;font:900 clamp(44px,15vw,130px)/1 system-ui,sans-serif;letter-spacing:.06em;color:${b.color};-webkit-text-stroke:3px rgba(0,0,0,.65);paint-order:stroke fill;text-shadow:0 6px 0 rgba(0,0,0,.4),0 0 40px ${b.glow}`;
+  const label = overlay('left:0;right:0;top:50%;margin-top:-.8em;z-index:1002');
+  label.style.cssText += `;text-align:center;font:900 clamp(44px,15vw,130px)/1 system-ui,sans-serif;letter-spacing:.06em;color:${b.color};-webkit-text-stroke:3px rgba(0,0,0,.65);paint-order:stroke fill;text-shadow:0 6px 0 rgba(0,0,0,.4)`; // hard shadow only: a blurred one on text that scales 3x is a slow repaint in Firefox
   label.innerHTML = `<div style="font-size:.5em;margin-bottom:.1em">${b.icon}</div>${b.text}`;
-  wrap.append(label);
+  const done = () => { wrap.remove(); label.remove(); };
   const tilt = kind === 'loss' ? 2 : -3;
+  const fade = [{opacity: 0}, {opacity: 1, offset: 0.15}, {opacity: 1, offset: 0.8}, {opacity: 0}];
   if (reduced()) {
-    wrap.animate([{opacity: 0}, {opacity: 1, offset: 0.2}, {opacity: 1, offset: 0.8}, {opacity: 0}], {duration: 1600}).finished.then(() => wrap.remove(), () => wrap.remove());
+    wrap.animate(fade, {duration: 1600}).finished.then(done, done);
+    label.animate(fade, {duration: 1600});
     return;
   }
   const from = kind === 'loss' ? 'translateY(-60vh) scale(1.2)' : 'scale(3.2)';
@@ -363,13 +389,17 @@ export function banner(kind) {
     {transform: `scale(1.05) rotate(${tilt}deg)`, opacity: 1, offset: 0.8},
     {transform: `scale(1.3) rotate(${tilt}deg)`, opacity: 0},
   ], {duration: 2000, easing: 'linear'});
-  wrap.animate([{opacity: 0}, {opacity: 1, offset: 0.15}, {opacity: 1, offset: 0.8}, {opacity: 0}], {duration: 2000}).finished.then(() => wrap.remove(), () => wrap.remove());
+  wrap.animate(fade, {duration: 2000}).finished.then(done, done);
 }
 
-/** The whole screen drains of color for a moment (a loss). */
-export function drain(el = document.querySelector('main')) {
-  if (reduced() || !el?.animate) return;
-  el.animate([{filter: 'grayscale(0)'}, {filter: 'grayscale(.9) brightness(.8)', offset: 0.2}, {filter: 'grayscale(.9) brightness(.8)', offset: 0.7}, {filter: 'grayscale(0)'}], {duration: 2000});
+/**
+ * The whole screen goes grey and dim for a moment (a loss). A grey veil fading in and out over the page, not a
+ * CSS filter on <main>: an animated filter makes the browser re-filter the entire page offscreen on every frame.
+ */
+export function drain() {
+  if (reduced()) return;
+  const d = overlay('inset:0;z-index:998;background:rgba(48,52,62,.62)');
+  d.animate([{opacity: 0}, {opacity: 1, offset: 0.2}, {opacity: 1, offset: 0.7}, {opacity: 0}], {duration: 2000}).finished.then(() => d.remove(), () => d.remove());
 }
 
 /** Vibrate on phones that can (a named pattern from VIBES). Silent everywhere else. */
@@ -386,6 +416,49 @@ export function fxForScenario(id) {
   return null;
 }
 
+// --- ?sounddebug: buttons that fire one effect at a time and report the frame times, to find which one stalls --------
+
+/** A row of buttons (top right). Each fires one effect alone, then logs its slowest frame and the time lost over ~3 s. */
+export function mountJankProbe(log) {
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed;top:4px;right:4px;z-index:2001;display:flex;flex-wrap:wrap;gap:4px;max-width:60vw;justify-content:flex-end';
+  const tests = {
+    nothing: () => {},
+    confetti,
+    fireworks: () => fireworks(),
+    'win banner': () => banner('win'),
+    'loss banner': () => banner('loss'),
+    'win (all)': () => { celebrate(); banner('win'); },
+    'canvas only': () => emit([], [makeRing(innerWidth / 2, innerHeight / 2, '#fff', {r1: 200, life: 1500})]),
+  };
+  let busy = false;
+  for (const [name, run] of Object.entries(tests)) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = name;
+    b.style.cssText = 'font:11px system-ui;padding:3px 6px;min-height:0;box-shadow:none;border-width:1px';
+    b.addEventListener('click', () => {
+      if (busy) return;
+      busy = true;
+      const frames = [];
+      let prev = 0, go = true;
+      const tick = (t) => { if (prev) frames.push(t - prev); prev = t; if (go) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+      setTimeout(() => {
+        run();
+        setTimeout(() => {
+          go = false; busy = false;
+          const g = frames.slice(3); // skip the frames the click itself caused
+          const lost = Math.round(g.reduce((a, x) => a + Math.max(0, x - 16.7), 0));
+          log(`probe "${name}": worst frame ${Math.round(Math.max(...g))} ms, ${g.filter((x) => x > 50).length} frames over 50 ms, ${lost} ms lost over ${g.length} frames`);
+        }, 3200);
+      }, 700);
+    });
+    bar.append(b);
+  }
+  document.body.append(bar);
+}
+
 // --- ?tune: sliders for every number above -----------------------------------------------------------------
 
 export async function mountTunePanel() {
@@ -393,7 +466,7 @@ export async function mountTunePanel() {
   const pane = new Pane({title: 'FX tuning'});
   const ranges = {
     count: [10, 400, 1], speed: [200, 1600, 10], spread: [0, 180, 1], gravity: [200, 3000, 10],
-    drag: [0, 5, 0.1], life: [400, 4000, 50], size: [3, 20, 1], shakePx: [0, 30, 1], shakeMs: [100, 1200, 20],
+    drag: [0, 5, 0.1], life: [400, 4000, 50], size: [3, 20, 1], shakePx: [0, 30, 1], shakeMs: [100, 1200, 20], canvasDensity: [0.5, 2, 0.25],
   };
   for (const [key, [min, max, step]] of Object.entries(ranges)) pane.addBinding(FX_PARAMS, key, {min, max, step});
   pane.addBinding(FX_PARAMS, 'haptics');

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {MOVES, makeCommit, resolve, verifyReveal} from '../js/games/rps/rules.js';
+import {MOVES, callout, makeCommit, resolve, verifyReveal} from '../js/games/rps/rules.js';
 
 test('resolve: all 9 pairings', () => {
   const expected = {
@@ -38,4 +38,12 @@ test('commit hides the move: same move, different nonce, different hash', async 
   const a = await makeCommit({roomId: 'ABC123', round: 1, move: 'rock'});
   const b = await makeCommit({roomId: 'ABC123', round: 1, move: 'rock'});
   assert.notEqual(a.hash, b.hash);
+});
+
+test('callout: names the winner and the verb, the same from both seats', () => {
+  assert.equal(callout('rock', 'scissors'), 'ROCK CRUSHES SCISSORS');
+  assert.equal(callout('paper', 'rock'), 'PAPER COVERS ROCK');
+  assert.equal(callout('scissors', 'paper'), 'SCISSORS CUT PAPER');
+  for (const a of MOVES) for (const b of MOVES) assert.equal(callout(a, b), callout(b, a), `${a} vs ${b}`);
+  assert.equal(callout('paper', 'paper'), 'PAPER vs PAPER: DRAW!');
 });
