@@ -1,22 +1,24 @@
 // Rock Paper Scissors screen: turns match state into DOM and hand animation.
 // Mounted into a container the room provides; destroy() leaves it empty.
 
+import {bake} from '../../bake.js';
 import {HandStageTube} from './hands-tube.js';
 import {play} from '../../sound.js';
+import {synth} from '../../synth.js';
+import {countTo, enter, pop, pulse, titleCard} from '../../juice.js';
 
 const REVEAL_FAILSAFE_MS = 5_000;
 const NUDGE_MS = 5_000; // friend locked in and I am still thinking: time for a "jaldi bol"
 
 const TEMPLATE = `
-<div class="rps">
+<div class="rps arena">
   <div class="score" aria-live="polite">
-    <div><span class="n score-win">0</span><span class="muted small who me label-me">You</span></div>
-    <div><span class="n score-draw">0</span><span class="muted small">Draws</span></div>
-    <div><span class="n score-lose">0</span><span class="muted small who them label-them">Friend</span></div>
+    <div class="fighter me"><span class="who label-me">You</span><span class="n score-win">0</span></div>
+    <div class="mid"><span class="round-label"></span><span class="draws"><b class="n score-draw">0</b> draws</span></div>
+    <div class="fighter them"><span class="who label-them">Friend</span><span class="n score-lose">0</span></div>
   </div>
-  <p class="muted small center round-label"></p>
   <h2 class="status center" aria-live="polite"></h2>
-  <div class="hands"></div>
+  <div class="ring"><div class="hands"></div><div class="vs" aria-hidden="true"><span>✊</span><b>VS</b><span>✊</span></div></div>
   <div class="moves">
     <button class="move" data-move="rock"><span class="emoji">✊</span>Rock</button>
     <button class="move" data-move="paper"><span class="emoji">✋</span>Paper</button>
@@ -34,8 +36,9 @@ const OUTCOME = {win: ['You win! 🎉', 'win'], lose: ['You lose 😬', 'lose'],
 const ROUND_SOUND = {win: 'rps.round_won', lose: 'rps.round_lost', draw: 'rps.round_draw'};
 
 /** @returns {{update(snapshot), destroy()}} */
-export function mountRpsView({container, match, myName}) {
+export function mountRpsView({container, match, myName, seat = 0}) {
   container.innerHTML = TEMPLATE;
+  const unbake = bake(container.querySelector('.rps'), container.querySelector('.ring')); // paint the rich backgrounds once (js/bake.js)
   const $ = (sel) => container.querySelector(sel);
   const stage = new HandStageTube($('.hands'));
   let anim = null; // animation progress for the current round, see drive()
@@ -43,10 +46,18 @@ export function mountRpsView({container, match, myName}) {
   let failsafe = null;
 
   $('.label-me').textContent = myName;
+  $('.rps').dataset.seat = String(seat);
+  $('.fighter.me').dataset.seat = String(seat); // seat colours, so both screens agree on who is red and who is blue
+  $('.fighter.them').dataset.seat = String(1 - seat);
   for (const btn of container.querySelectorAll('.move')) {
-    btn.addEventListener('click', () => match.pick(btn.dataset.move));
+    btn.addEventListener('click', () => { synth.unlock(); synth.zap(1200); pop(btn, {scale: 0.9}); match.pick(btn.dataset.move); });
   }
-  $('.next').addEventListener('click', () => match.nextRound());
+  $('.next').addEventListener('click', () => { synth.unlock(); match.nextRound(); });
+  enter(container.querySelectorAll('.score > *'), {y: -16, stagger: 0.08});
+  enter(container.querySelectorAll('.move'), {y: 30, stagger: 0.07, delay: 0.3});
+  titleCard($('.rps'), {kicker: 'Fight night', title: 'Rock Paper Scissors', sub: 'Pick your move, then SHOOT!', theme: 'neon', hold: 0.8});
+  let vsPulse = pulse($('.vs b'), {scale: 1.12, duration: 0.5});
+  let shownRound = 0;
 
   // Turns match state into hand animation. Called on every state change and is
   // idempotent: each step happens once per round (keyed by session + round).
@@ -109,10 +120,14 @@ export function mountRpsView({container, match, myName}) {
     const resultVisible = s.phase === 'result' && anim?.done;
     if (s.phase !== 'result' || resultVisible) shownScores = s.scores; // no spoilers mid-animation
 
-    $('.score-win').textContent = shownScores.win;
-    $('.score-draw').textContent = shownScores.draw;
-    $('.score-lose').textContent = shownScores.lose;
+    countTo($('.score-win'), shownScores.win);
+    countTo($('.score-draw'), shownScores.draw);
+    countTo($('.score-lose'), shownScores.lose);
     $('.round-label').textContent = `Round ${s.round}`;
+    if (s.round !== shownRound) { if (shownRound) { pop($('.round-label'), {scale: 1.8}); synth.whoosh(0.3); } shownRound = s.round; }
+    // The VS sign holds the ring until the first hand comes up.
+    const idle = s.phase === 'choosing' && !s.myMove && !s.theirCommitted;
+    container.querySelector('.ring').classList.toggle('idle', idle);
 
     const status = $('.status');
     status.className = 'status center';
@@ -141,7 +156,8 @@ export function mountRpsView({container, match, myName}) {
 
   return {
     update(s) { drive(s); render(s); },
-    destroy() {
+    destroy() { unbake();
+      vsPulse?.kill();
       clearTimeout(anim?.nudge);
       anim = null; // pending animation callbacks check this and stop
       clearTimeout(failsafe);

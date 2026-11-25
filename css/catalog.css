@@ -4,9 +4,9 @@
 #game-search { flex: none; width: 100%; }
 #room-picker { display: flex; flex-direction: column; gap: 16px; }
 
-.people { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 20px; }
+.people { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--s-2) 20px; }
 .people .who { font-weight: 600; }
-.notice { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); text-align: center; }
+.notice { margin: 0; padding: var(--s-3); border-radius: var(--r-md); background: var(--bg); border: var(--bw) solid var(--line); text-align: center; }
 
 .proposal { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 12px; background: var(--bg); border: 1px solid var(--accent); }
 .proposal p { margin: 0; }
@@ -19,33 +19,37 @@
 /* A game may ask for a wide stage (layout: 'wide' in js/games.js). */
 main.wide { max-width: 960px; }
 main.wide .game-stage { min-height: calc(100vh - 240px); }
+/* An immersive game paints its own scene, so the room's card frame steps aside and the column widens. */
+main.immersive { max-width: 640px; padding-inline: var(--s-3); }
+main.immersive section { background: transparent; border: 0; box-shadow: none; padding: 0; }
+main.immersive .game-bar { margin-bottom: var(--s-2); }
 
-.tag-bar { display: flex; flex-wrap: wrap; gap: 6px; }
-.tag-bar .chip { padding: 5px 12px; }
+.tag-bar { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.tag-bar .chip { padding: var(--s-1) var(--s-3); }
 .tag-bar .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 
 #game-count { margin: -4px 0 0; }
 
-.game-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.game-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
 .game-grid li { display: flex; min-width: 0; }
 
-.game-card { --lift: 4px; font-weight: 400; border-radius: var(--r-lg); flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 12px; text-align: left; position: relative; }
+.game-card { --lift: 4px; font-weight: 400; border-radius: var(--r-lg); flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2); padding: var(--s-4) var(--s-3); text-align: left; position: relative; }
 .game-card .icon { width: 48px; height: 48px; display: grid; place-items: center; font-size: 1.7rem; line-height: 1; border-radius: var(--r-md); background: var(--bg); border: var(--bw) solid var(--edge); }
 .game-card .title { font-weight: 800; line-height: 1.25; }
 .game-card .blurb { font-size: .8rem; color: var(--muted); line-height: 1.35; }
 .game-card .meta { font-size: .75rem; color: var(--muted); margin-top: auto; padding-top: 4px; }
 
 .game-card .tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.game-card .tag { font-size: .7rem; padding: 1px 7px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
+.game-card .tag { font-size: .7rem; padding: 2px var(--s-2); border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
 
 .game-card.ready:hover:not(:disabled) { border-color: var(--accent); }
-.game-card.ready:disabled { opacity: .6; }
-.game-card.soon { opacity: .6; }
 .game-card .badge { position: absolute; top: 10px; right: 10px; font-size: .68rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
 .game-card.ready .badge { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 
-/* Disabled buttons are dimmed by style.css; the card sets its own opacity, so do not stack them. */
-.game-card.soon:disabled { opacity: .6; }
+/* A card you cannot open says so three ways, not by fading alone: a flat paper fill, muted ink and a dashed edge with a no-entry cursor. */
+.game-card:disabled, .game-card.soon { opacity: 1; background: var(--bg); color: var(--muted); border-style: dashed; box-shadow: none; cursor: not-allowed; }
+.game-card:disabled .icon, .game-card.soon .icon { filter: grayscale(1); }
+.game-card:disabled .badge, .game-card.soon .badge { background: var(--line); color: var(--muted); border-color: transparent; }
 
 @media (max-width: 340px) {
   .game-grid { grid-template-columns: 1fr; }

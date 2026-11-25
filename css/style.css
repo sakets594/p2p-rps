@@ -1,11 +1,14 @@
 @import url('./tokens.css');
+@import url('./fonts.css');
 
 /* The room page. Every color, radius and shadow comes from tokens.css. */
 * { box-sizing: border-box; }
+html, body { overflow-x: clip; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 var(--font); }
 main { max-width: 460px; margin: 0 auto; padding: var(--s-5) var(--s-4) 48px; }
 section { background: var(--card); border: var(--bw-heavy) solid var(--edge); border-radius: var(--r-lg); box-shadow: 0 var(--lift-lg) 0 var(--edge); padding: var(--s-5) 20px; display: flex; flex-direction: column; gap: var(--s-4); }
 section[hidden], [hidden] { display: none !important; }
+h1, h2 { text-wrap: balance; }
 h1 { margin: 0; font-size: 1.8rem; font-weight: 800; letter-spacing: -.01em; text-align: center; }
 h2 { margin: 0; font-size: 1.3rem; min-height: 2em; }
 .muted { color: var(--muted); } .small { font-size: .85rem; } .center { text-align: center; margin: 0; }
@@ -13,7 +16,7 @@ h2 { margin: 0; font-size: 1.3rem; min-height: 2em; }
 
 /* Buttons are chunky: an ink outline and a hard shadow underneath that they sink into when pressed.
    A game that draws its own cells sets --lift: 0px on them to switch the lift off. */
-button { font: inherit; font-weight: 700; min-height: var(--tap); padding: 10px 16px; border-radius: var(--r-md); border: var(--bw) solid var(--edge); background: var(--card); color: var(--fg); cursor: pointer;
+button { font: inherit; font-weight: 700; min-height: var(--tap); padding: var(--s-3) var(--s-4); border-radius: var(--r-md); border: var(--bw) solid var(--edge); background: var(--card); color: var(--fg); cursor: pointer;
   box-shadow: 0 var(--lift) 0 var(--edge); transition: transform var(--t-fast), box-shadow var(--t-fast), background var(--t-fast); }
 button:hover:not(:disabled) { transform: translateY(calc(var(--lift) / -3)); box-shadow: 0 calc(var(--lift) + var(--lift) / 3) 0 var(--edge); }
 button:active:not(:disabled) { transform: translateY(var(--lift)); box-shadow: 0 0 0 var(--edge); }
@@ -21,31 +24,31 @@ button:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 button.primary { background: var(--accent); color: var(--accent-fg); font-weight: 800; padding: 12px 16px; }
 button.ghost { background: transparent; box-shadow: none; } button.ghost:hover:not(:disabled) { box-shadow: none; transform: none; background: var(--card); }
-button.small { --lift: 2px; white-space: nowrap; min-height: 36px; padding: 6px 12px; font-size: .85rem; }
+button.small { --lift: 2px; white-space: nowrap; min-height: 36px; padding: var(--s-2) var(--s-3); font-size: .85rem; }
 
 .divider { display: flex; align-items: center; gap: var(--s-3); color: var(--muted); font-size: .85rem; }
 .divider::before, .divider::after { content: ""; flex: 1; border-top: var(--bw) dashed var(--line); }
 #join-form { display: flex; gap: var(--s-2); }
-input { flex: 1; min-width: 0; min-height: var(--tap); font: inherit; font-weight: 600; padding: 10px 14px; border-radius: var(--r-md); border: var(--bw) solid var(--edge); background: var(--bg); color: var(--fg); }
+input { flex: 1; min-width: 0; min-height: var(--tap); font: inherit; font-weight: 600; padding: var(--s-3) var(--s-4); border-radius: var(--r-md); border: var(--bw) solid var(--edge); background: var(--bg); color: var(--fg); }
 #code-input { font-family: var(--font-mono); letter-spacing: .15em; text-transform: uppercase; }
 .create-block { display: flex; flex-direction: column; gap: var(--s-4); }
-.invite-note { margin: 0; padding: 10px 14px; border-radius: var(--r-md); background: var(--bg); border: var(--bw) dashed var(--accent); text-align: center; font-weight: 600; }
+.invite-note { margin: 0; padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--bg); border: var(--bw) dashed var(--accent); text-align: center; font-weight: 600; }
 .field { display: flex; flex-direction: column; gap: var(--s-1); }
 
 /* A person's name with their seat's color dot. */
-.who { display: inline-flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }
+.who { display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2); max-width: 100%; }
 .who::before { content: ""; flex: none; width: 12px; height: 12px; border-radius: 50%; border: var(--bw) solid var(--edge); }
 .who.me::before { background: var(--me); } .who.them::before { background: var(--them); }
 .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .qr-panel { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); }
-.qr { width: min(220px, 70vw); background: #fff; padding: var(--s-2); border: var(--bw-heavy) solid var(--edge); border-radius: var(--r-md); line-height: 0; }
+.qr { width: min(220px, 70vw); background: var(--paper); padding: var(--s-2); border: var(--bw-heavy) solid var(--edge); border-radius: var(--r-md); line-height: 0; }
 .qr svg { width: 100%; height: auto; display: block; }
-.qr .qr-error { line-height: 1.4; color: #333; font-size: .85rem; padding: var(--s-3); }
+.qr .qr-error { line-height: 1.4; color: var(--ink); font-size: .85rem; padding: var(--s-3); }
 
 .bar { display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
 .bar > div:first-child { display: flex; flex-direction: column; }
-.actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
 .room-title { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .code { font-family: var(--font-mono); letter-spacing: .2em; font-size: 1.3rem; font-weight: 800; }
 
@@ -53,10 +56,10 @@ input { flex: 1; min-width: 0; min-height: var(--tap); font: inherit; font-weigh
 
 .chip { padding: 4px 12px; font-size: .85rem; min-height: 32px; --lift: 2px; border-radius: var(--r-pill); background: var(--card); }
 
-.recent-rooms { display: flex; flex-direction: column; gap: 6px; }
+.recent-rooms { display: flex; flex-direction: column; gap: var(--s-2); }
 .recent-rooms ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
-.recent-rooms li { display: flex; gap: 6px; }
+.recent-rooms li { display: flex; gap: var(--s-2); }
 .recent-rooms .room-btn { flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); text-align: left; }
 .recent-rooms .room-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recent-rooms .room-code-text { font-family: var(--font-mono); letter-spacing: .1em; color: var(--muted); font-size: .85rem; flex: none; }
-.recent-rooms .forget { padding: 6px 10px; }
+.recent-rooms .forget { padding: var(--s-2) var(--s-3); }

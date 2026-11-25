@@ -1,0 +1,29 @@
+/* Dots and Boxes on graph paper: a notebook page with a grid, pencil-grey hover hints, thick marker lines in the
+   seat colours, hatched boxes and marker initials. Keeps its own paper colours in light and dark mode. */
+
+.db-page {
+  position: relative; border-radius: 6px; padding: 6px; rotate: -.5deg;
+  background:
+    linear-gradient(rgba(58, 134, 255, .18) 1px, transparent 1px) 0 0 / 14px 14px,
+    linear-gradient(90deg, rgba(58, 134, 255, .18) 1px, transparent 1px) 0 0 / 14px 14px,
+    #fffdf6;
+  border: 3px solid var(--ink); box-shadow: 6px 8px 0 var(--ink);
+}
+.db-page::before { content: ''; position: absolute; left: 0; right: 0; top: -3px; height: 16px; border-radius: 6px 6px 0 0;
+  background: radial-gradient(circle at 50% 60%, #fff 0 4px, transparent 4.5px) 8px 0 / 24px 16px repeat-x, #e9e4d4; border: 3px solid var(--ink); border-bottom-width: 2px; }
+.tg.graph .db-svg { margin-top: 12px; }
+.tg.graph .db-dot { fill: #1b1b2f; r: 5.5px; }
+.tg.graph .db-line { stroke: transparent; stroke-width: 7; }
+.tg.graph .db-hit:hover + .db-line:not(.mine):not(.theirs) { stroke: #9aa0b4; stroke-dasharray: 6 6; }
+.tg.graph .db-line.mine, .tg.graph .db-line.theirs { stroke-width: 8; }
+.tg.graph .db-line.mine { stroke: var(--me); } .tg.graph .db-line.theirs { stroke: var(--them); }
+.tg.graph .db-line.fresh { stroke-dasharray: 60; animation: fx-draw .32s ease-out; }
+.tg.graph .db-box.seat-0 { fill: rgba(239, 62, 92, .24); } .tg.graph .db-box.seat-1 { fill: rgba(17, 144, 232, .24); } /* flat: a hatch pattern per box repaints on every move */
+.tg.graph .db-initial { font: 26px var(--font-marker); }
+.tg.graph .db-initial.seat-0 { fill: #c4213f; } .tg.graph .db-initial.seat-1 { fill: #0d6cb3; }
+.db-initial { transform-box: fill-box; transform-origin: center; }
+.db-initial.pop { animation: db-stamp .45s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes db-stamp { from { transform: scale(2.6) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.tg.graph .tg-status { font: 1.15rem/1.2 var(--font-marker); }
+.tg.graph .tg-p b { font: 1.05rem/1.2 var(--font-marker); }
+@media (prefers-reduced-motion: reduce) { .db-initial.pop { animation: none; } }

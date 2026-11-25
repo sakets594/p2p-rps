@@ -1,22 +1,65 @@
-/* Trivia Duel screen. Colors come from css/style.css. */
+/* Trivia Duel as a TV quiz show: a studio with spotlight beams, two podiums whose lamp lights up once that player
+   has answered, a marquee question board with an LED timer, and lettered answer plates. Keeps its own studio colours
+   in light and dark mode. No animated blurred shadows (Firefox). */
 
 .tv { display: flex; flex-direction: column; gap: 14px; }
-.tv-top { display: flex; justify-content: space-between; align-items: baseline; }
-.tv-bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.tv.show {
+  position: relative; padding: var(--s-3); border-radius: 20px; color: #f3eeff; border: 3px solid #0a0620; box-shadow: 0 6px 0 #0a0620;
+  background:
+    conic-gradient(from 200deg at 15% -10%, transparent 0 8deg, rgba(255, 255, 255, .09) 8deg 16deg, transparent 16deg) ,
+    conic-gradient(from 140deg at 85% -10%, transparent 0 8deg, rgba(255, 255, 255, .09) 8deg 16deg, transparent 16deg),
+    radial-gradient(120% 70% at 50% 110%, #5b2bd1 0%, transparent 60%),
+    linear-gradient(180deg, #1a0f4d, #0e0830);
+}
+
+/* Podiums */
+.tv-podiums { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tv-pod {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 16px 8px 10px; min-width: 0;
+  border-radius: 12px 12px 4px 4px; border: 3px solid #0a0620; box-shadow: 0 5px 0 #0a0620;
+  background: linear-gradient(180deg, #3b2a8f, #24186b);
+}
+.tv-pod b { font: 400 1rem/1.1 var(--font-game); letter-spacing: .02em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-pod.me b { color: #ffb3c6; } .tv-pod.them b { color: #a8dcff; }
+.tv-pod .tg-score { font: 400 1.9rem/1 var(--font-game); color: #ffe27a; background: #0a0620; padding: 4px 14px; border-radius: 8px; min-width: 2.4em; text-align: center; letter-spacing: .06em; }
+.tv-lamp { position: absolute; top: -10px; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #0a0620; background: #3a3060; transition: background .2s; }
+.tv-pod.lit .tv-lamp { background: #ffcf4a; box-shadow: 0 0 0 4px rgba(255, 207, 74, .35); }
+
+/* Question board */
+.tv-board {
+  position: relative; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 16px; border-radius: 14px; border: 3px solid #0a0620;
+  background: #120b3a; box-shadow: 0 5px 0 #0a0620;
+}
+.tv-bulbs { position: absolute; left: 6px; right: 6px; bottom: 4px; height: 7px; pointer-events: none; background: radial-gradient(circle, #ffe9a3 0 2.2px, transparent 2.8px) 0 0 / 14px 7px; }
+.tv-bulbs.top { top: 4px; bottom: auto; }
+.tv-top { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; font: 700 .8rem/1 var(--font-neon); letter-spacing: .12em; text-transform: uppercase; color: #b9a8ff; }
+.tv-left { color: #ffe27a; font-size: 1rem; }
+.tv-bar { height: 10px; border-radius: 5px; background: #2a1f66; overflow: hidden; border: 2px solid #0a0620; }
 .tv-bar > i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left; }
 .tv-bar > i.urgent { animation: tv-urgent .5s ease-in-out infinite; }
-@keyframes tv-urgent { 50% { filter: brightness(1.6); } }
-.tv-q { margin: 0; font-size: 1.25rem; min-height: 3.2em; }
-.tv-opts { display: grid; gap: 8px; }
-.tv-opt { text-align: left; padding: 12px 14px; border-width: 2px; }
-.tv-opt.mine { border-color: var(--me); }
-.tv-opt.theirs { box-shadow: inset 0 0 0 2px var(--them); }
-.tv-opt.right { animation: tv-pop .45s cubic-bezier(.3, 1.5, .5, 1); background: color-mix(in srgb, var(--good) 25%, var(--card)); border-color: var(--good); }
-.tv-opt.wrong.mine { background: color-mix(in srgb, var(--bad) 20%, var(--card)); border-color: var(--bad); }
-.tv-opt:disabled { opacity: 1; cursor: default; }
-.tv-opt .tv-tag { float: right; font-size: .8rem; color: var(--muted); }
-.tv-note { margin: 0; text-align: center; min-height: 1.6em; }
-.tv-note.win { color: var(--good); } .tv-note.lose { color: var(--bad); }
+@keyframes tv-urgent { 50% { opacity: .55; } }
+.tv.show .tv-q { margin: 0; font: 400 1.3rem/1.25 var(--font-game); letter-spacing: .01em; min-height: 3.2em; color: #fff; text-align: center; display: grid; place-items: center; }
 
-@keyframes tv-pop { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: none; } }
+/* Answer plates */
+.tv-opts { display: grid; gap: 8px; }
+.tv-opt {
+  position: relative; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 14px 10px 10px; min-height: 52px;
+  font: 700 1.02rem/1.2 var(--font); color: #fff; background: linear-gradient(180deg, #2c2380, #201a63); border: 3px solid #0a0620;
+  border-radius: 26px; box-shadow: 0 4px 0 #0a0620;
+}
+.tv-opt em { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; font: 400 1rem/1 var(--font-game); font-style: normal; color: #0a0620; background: #ffe27a; border: 2px solid #0a0620; }
+.tv-opt span { flex: 1; min-width: 0; }
+.tv-opt:hover:not(:disabled) { background: linear-gradient(180deg, #3d32a8, #2c2380); }
+.tv-opt.mine { background: linear-gradient(180deg, #ff9a3d, #e0701a); color: #1a0b00; }
+.tv-opt.theirs::after { content: ''; position: absolute; right: 12px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: #a8dcff; border: 2px solid #0a0620; }
+.tv-opt.right { background: linear-gradient(180deg, #4ade80, #22a35a); color: #052a14; animation: tv-pop .5s cubic-bezier(.3, 1.5, .5, 1); }
+.tv-opt.wrong.mine { background: linear-gradient(180deg, #ff6b6b, #c92a2a); color: #fff; }
+.tv-opt.wrong:not(.mine) { opacity: .55; }
+.tv-opt:disabled { cursor: default; opacity: 1; }
+.tv-opt.wrong:not(.mine):disabled { opacity: .55; }
+.tv-opt .tv-tag { font: 700 .72rem/1 var(--font); color: #0a0620; background: #a8dcff; border-radius: 999px; padding: 3px 8px; margin-right: 14px; }
+.tv-note { margin: 0; text-align: center; min-height: 1.6em; font: 400 1.05rem/1.3 var(--font-game); letter-spacing: .02em; }
+.tv-note.win { color: #7dffb0; } .tv-note.lose { color: #ff8f8f; }
+
+@keyframes tv-pop { 0% { transform: scale(1); } 40% { transform: scale(1.05); } 100% { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .tv-bar > i.urgent, .tv-opt.right { animation: none; } }

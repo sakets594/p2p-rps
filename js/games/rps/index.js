@@ -12,10 +12,11 @@ import {mountRpsView} from './view.js';
 export async function createGame({session, container}) {
   await loadCss(new URL('./rps.css', import.meta.url));
   const myName = session.players.find((p) => p.id === session.selfId)?.name ?? 'You';
+  const seat = Math.max(0, session.players.findIndex((p) => p.id === session.selfId));
 
   let view = null;
   const match = new RpsMatch({session, onChange: (s) => view?.update(s)});
-  view = mountRpsView({container, match, myName});
+  view = mountRpsView({container, match, myName, seat});
   view.update(match.snapshot());
 
   return {

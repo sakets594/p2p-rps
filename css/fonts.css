@@ -1,0 +1,16 @@
+/* Display fonts for game titles, banners and scenes (assets/fonts, see vendor/README.md for licenses).
+   Body text keeps the system rounded font from tokens.css. font-display: swap so text shows at once. */
+@font-face { font-family: 'Bungee'; src: url('../assets/fonts/bungee-latin-400-normal.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Orbitron'; font-weight: 700; src: url('../assets/fonts/orbitron-latin-700-normal.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Orbitron'; font-weight: 900; src: url('../assets/fonts/orbitron-latin-900-normal.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Rye'; src: url('../assets/fonts/rye-latin-400-normal.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Permanent Marker'; src: url('../assets/fonts/permanent-marker-latin-400-normal.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Luckiest Guy'; src: url('../assets/fonts/luckiest-guy-latin-400-normal.woff2') format('woff2'); font-display: swap; }
+
+:root {
+  --font-game: 'Bungee', var(--font);
+  --font-neon: 'Orbitron', var(--font);
+  --font-western: 'Rye', Georgia, serif;
+  --font-marker: 'Permanent Marker', var(--font);
+  --font-cartoon: 'Luckiest Guy', var(--font);
+}

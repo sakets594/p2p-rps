@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE - scripted two-player demo</title>
+<!-- Throwaway harness for recording gameplay clips: mounts two copies of a game over the in-memory network and lets
+     demo-bots.js play both seats. Open /preview/game-demo.html?game=tron, then call `await __demo.run()` in the console
+     (or add &auto=1). Not part of the site. -->
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  body { background: #0d0a1f; }
+  #row { display: flex; gap: 14px; justify-content: center; padding: 10px; }
+  .col { width: 440px; max-width: 100%; }
+  .col h2 { font: 700 12px/1 var(--font); margin: 2px 0 6px 4px; min-height: 0; color: #9b94c9; letter-spacing: .08em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div id="row"><div class="col" data-seat="0"><h2>Alice's screen</h2><div id="a"></div></div><div class="col" data-seat="1"><h2>Bob's screen</h2><div id="b"></div></div></div>
+<script type="module" src="./demo-bots.js"></script>
+</body>
+</html>

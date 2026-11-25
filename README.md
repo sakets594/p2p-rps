@@ -1,12 +1,26 @@
 # P2P Games
 
-Frontend-only multiplayer games. No game server, no backend, no cost. Nine two-player games:
+Frontend-only multiplayer games. No game server, no backend, no cost. Fourteen two-player games:
 Rock Paper Scissors, Cup Pong, Tic-Tac-Toe, Connect Four, Dots and Boxes, Memory Match, Battleship,
-Hangman and Trivia Duel. A catalog entry with `status: 'soon'` shows as a "Soon" placeholder.
+Hangman, Trivia Duel, Draw & Guess, Blind Draw, Emoji Charades, Light Cycles and Quick Draw. A catalog entry with `status: 'soon'` shows as a "Soon" placeholder.
 
 [![Watch the 20-second launch video](assets/brag/brag.jpg)](assets/brag/brag.mp4)
 
 *20-second launch video, made with the [brag](https://github.com/latent-spaces/brag) skill. Click the picture to play it.*
+
+### Gameplay
+
+Both players' screens side by side, played by bots (`preview/game-demo.html`). Click a picture to play the clip.
+
+| | |
+| --- | --- |
+| **Light Cycles**<br>[![Light Cycles gameplay](assets/gameplay/tron.jpg)](assets/gameplay/tron.mp4) | **Quick Draw**<br>[![Quick Draw gameplay](assets/gameplay/quick-draw.jpg)](assets/gameplay/quick-draw.mp4) |
+| **Draw & Guess**<br>[![Draw & Guess gameplay](assets/gameplay/draw-guess.jpg)](assets/gameplay/draw-guess.mp4) | **Blind Draw**<br>[![Blind Draw gameplay](assets/gameplay/blind-draw.jpg)](assets/gameplay/blind-draw.mp4) |
+| **Emoji Charades**<br>[![Emoji Charades gameplay](assets/gameplay/emoji-charades.jpg)](assets/gameplay/emoji-charades.mp4) | **Rock Paper Scissors**<br>[![Rock Paper Scissors gameplay](assets/gameplay/rps.jpg)](assets/gameplay/rps.mp4) |
+| **Cup Pong**<br>[![Cup Pong gameplay](assets/gameplay/cup-pong.jpg)](assets/gameplay/cup-pong.mp4) | **Tic-Tac-Toe**<br>[![Tic-Tac-Toe gameplay](assets/gameplay/tic-tac-toe.jpg)](assets/gameplay/tic-tac-toe.mp4) |
+| **Connect Four**<br>[![Connect Four gameplay](assets/gameplay/connect-four.jpg)](assets/gameplay/connect-four.mp4) | **Dots and Boxes**<br>[![Dots and Boxes gameplay](assets/gameplay/dots-and-boxes.jpg)](assets/gameplay/dots-and-boxes.mp4) |
+| **Memory Match**<br>[![Memory Match gameplay](assets/gameplay/memory-match.jpg)](assets/gameplay/memory-match.mp4) | **Battleship**<br>[![Battleship gameplay](assets/gameplay/battleship.jpg)](assets/gameplay/battleship.mp4) |
+| **Hangman**<br>[![Hangman gameplay](assets/gameplay/hangman.jpg)](assets/gameplay/hangman.mp4) | **Trivia Duel**<br>[![Trivia Duel gameplay](assets/gameplay/trivia-duel.jpg)](assets/gameplay/trivia-duel.mp4) |
 
 - **Hosting:** static files on GitHub Pages (free, HTTPS, which WebRTC needs).
 - **Connecting:** [Trystero](https://github.com/dmotz/trystero) uses free public Nostr relays only to
@@ -39,8 +53,13 @@ The room is two players for now; a third person who joins is ignored.
 | `js/storage.js` | Recent names and rooms in `localStorage`. |
 | `js/sound-map.js` | Which meme clips can play for which moment (one scenario, many clips, one picked at random). |
 | `js/sound.js` | Plays them: one clip at a time, mute, loads on first tap. |
+| `js/synth.js` | Sound effects made on the spot with Web Audio (wind, whistle, gunshot, beeps); respects the Sound button. |
 | `js/sound-events.js` | Turns room changes and Cup Pong throws into scenario ids. |
-| `js/fx.js` | Effects: glowing particles (stars, sparks, emoji), shockwave rings, fireworks, floating "+1" text, VICTORY / DEFEAT / DRAW banners, phone vibration. Games call it for their own moments. Add `?tune` to the URL for live sliders (Tweakpane). `preview/fx-demo.html?game=ttt\|c4\|dots\|mm\|bs\|tv\|result` plays a scripted match to watch them. |
+| `js/juice.js` | Motion for game views on GSAP: title cards between rounds (themes `neon`, `western`, `marker`, `stage`), staggered entrances, count-ups, rubber stamps, camera-style shakes, screen wipes, letter scrambles. Respects reduced motion. Styles in `css/juice.css`. |
+| `js/bake.js` | Paints an element's rich CSS background once into a bitmap, because Firefox repaints gradients whenever something moves over them. |
+| `vendor/` | GSAP 3.15 and Pixi.js 8.23 (+ pixi-filters) copied from npm, loaded only by the games that use them. Versions and licenses: `vendor/README.md`. |
+| `css/fonts.css` | Self-hosted display fonts (`assets/fonts/`): Bungee, Orbitron, Rye, Permanent Marker, Luckiest Guy, as `--font-game`, `--font-neon`, `--font-western`, `--font-marker`, `--font-cartoon`. |
+| `js/fx.js` | Effects: glowing particles (stars, sparks, emoji), shockwave rings, fireworks, floating "+1" text, VICTORY / DEFEAT / DRAW banners, phone vibration. Games call it for their own moments. Add `?tune` to the URL for live sliders (Tweakpane). `preview/fx-demo.html?game=rps\|ttt\|c4\|dots\|mm\|bs\|tv\|result` plays a scripted match to watch them. |
 
 Messages on the wire are `{t: kind, ...}`: `hello`, `propose`, `accept`, `decline`, `cancel`, `end`, and
 `game` (which carries a game's own message, stamped with a session id so a late message from a game you
@@ -51,7 +70,8 @@ mismatch shows "ask your friend to refresh" instead of a silent hang.
 
 1. Add an entry to `GAMES` in `js/games.js`:
    `id, title, icon, tags, blurb, status, minPlayers, maxPlayers, load`, and optionally
-   `layout: 'wide'` (a big stage instead of the 460px column) and `resumable: true`.
+   `layout: 'wide'` (a big stage instead of the 460px column), `layout: 'immersive'` (a game that paints its own
+   full scene: a wider column with no room card around it) and `resumable: true`.
    `status: 'soon'` shows an unplayable "Soon" card.
 2. Create `js/games/<id>/index.js` exporting `createGame({session, container})`. It may be async and
    returns `{destroy()}`. See `js/games/rps/index.js`.
@@ -81,6 +101,35 @@ mismatch shows "ask your friend to refresh" instead of a silent hang.
   1 point for a right answer, +1 for the faster right answer. Each browser times itself, so this is for friends.
   Memory Match, Trivia and the commit-reveal games are not cheat-proof against someone reading the page source or console.
 
+- Draw & Guess and Blind Draw (`js/games/draw-guess/`): one player draws a secret word (3 to pick from, locked in by hash like Hangman)
+  on a shared canvas while the other types guesses; 4 rounds, roles alternate. Strokes stream as small chunks of integer points in a
+  1000 x 1000 canvas space, so any screen size looks the same. The drawer's side answers every guess honestly ("so close" when one
+  letter off) and the guesser checks the revealed word against the hash, every answer and every hint. A right guess scores 50 to 100
+  by speed (the drawer gets half). A hint letter appears at half time and at three quarters. Blind Draw is the same game with the
+  drawer's own lines hidden until the round ends (`mode: 'blind'`, see `blind.js`). Add words in `words.js`. The look is a sketchbook
+  on a desk: ruled paper with spiral rings, word choices dealt as index cards, crayons, a pencil that burns down as the timer, guesses
+  as speech bubbles and a CORRECT! stamp.
+- Emoji Charades (`js/games/emoji-charades/`): the describer picks one of three phrases (movie, food, place, animal, action; the guesser
+  sees the category as a clue) and acts it out with an emoji palette only; the guesser types guesses. Same commit-by-hash and honest
+  answers as Draw & Guess. **Scoring flag**: on (default), points come from how few emoji were used (100 for three or fewer, 10 less
+  per extra, taken-back ones still count); off, from how fast the guess came. The first describer flips it before picking and the
+  other side sees which rule is on. Add phrases in `phrases.js`, emoji in `emoji.js`. The look is a little theatre: marquee name
+  boards, phrase tickets, curtains that open on a spotlit stage where each emoji drops in (or flies from the key you tapped), and
+  applause.
+- Light Cycles (`js/games/tron/`): two bikes on a 36 x 36 grid, steer by swipe, arrow keys/WASD or the two big buttons; hit a wall, a
+  trail or the other bike and you crash. First to 2 rounds (a double crash replays). Lockstep: both screens run the same pure
+  simulation (`rules.js`) and only turns travel, applied 2 ticks later on both sides, with a state hash checked as it goes ("the two
+  screens disagree" if they ever drift). If the other side's input is late the round waits for it rather than drifting.
+  Drawn with Pixi (WebGL) and a bloom filter: neon trails, bikes that glide between grid steps, engine sparks, a crash flash with a
+  camera punch-in and a "derez" fade, plus a synthwave loop and engine hum from `js/synth.js`.
+- Quick Draw (`js/games/quick-draw/`): a desert standoff, first to 3 duels. Wait for DRAW and tap; tapping early (or faster than a human
+  can react) is a false start and loses. The wait is picked from the session id so both screens agree, with decoys during it (a crow, a
+  gust, the other cowboy twitching). Each screen times its own player from the moment IT shows DRAW and reports it, so network delay
+  never counts against anyone. The scene is inline SVG (`scene.js`: a little town, mesas, shaded cowboys) with five times of day, one
+  per duel, and it is directed like a film: letterbox bars, camera cuts between the cowboys' eyes and gun hands while a heartbeat
+  speeds up, a slow-motion shot with a tracer, a flying hat and dust, and a bullet hole on the loser's screen. Sound comes from
+  `js/synth.js` (a whistled tune, wind, heartbeat, gunshot), so the game needs no image or audio files. Self-reported times mean a
+  modified client could cheat: it is for friends.
 - Cup Pong (`js/games/cup-pong/`): swipe to throw a ball at the other player's 10 cups, 5 rounds of 2 balls, one table bounce allowed,
   both balls in earns an extra turn, clearing every cup wins at once. Only the throw inputs travel; both sides replay them with the same
   deterministic physics (`physics.js`) and a mismatch is reported as a desync. A forgiveness helper (`aim-assist.js`) nudges near-misses.
@@ -154,6 +203,20 @@ Every later `git push` to `main` redeploys automatically.
   brief connection drop, not a reload.
 - **Two players per room** for now.
 
+## Game roadmap
+
+Built from the original plan: Draw & Guess, Blind Draw, Emoji Charades, Light Cycles and Quick Draw.
+
+Not built yet:
+
+- **Color Code Duel** (Mastermind): each player sets a secret code of 4 pegs from 6 colors and cracks the other's; feedback is right
+  color in the right place, and right color in the wrong place. Only lukewarm so far, so it was left out.
+- **Liar's Dice** (parked, needs more design before building). Each player has 5 dice hidden under a cup and sees only their own. They
+  take turns bidding on the total across all 10 dice ("at least four 3s") and the next player raises the bid or calls "Liar!"; the cups
+  lift, and whoever was wrong loses a die. Open questions: how much the game suffers without seeing the other person's face (probably
+  best on a voice call), whether ones are wild, how many dice to start with, and the commit-reveal for the dice (reuse RPS's).
+- Draw & Guess extras: One Line and Ink Limit modes, and Telephone (each player draws the other's guess).
+
 ## Not built yet
 
 A room of more than two people (with a computed leader), a "room is full" screen, audio and video calls,
@@ -173,6 +236,13 @@ to copy the clips from the meme-music library (`SFX_LIBRARY=...` if it is not at
 `assets/sfx/`. `HELD_BACK` in that file lists clips left out on purpose. Players mute with the Sound
 button in the room header; the choice is remembered. Browsers keep audio off until the first tap, so
 the first tap anywhere on the page turns it on.
+
+Scenario ids are `<scope>.<moment>`: `room.*` and `game.*` fire from the room for any game; every game has its
+own scope (`rps`, `cp`, `board` for the shared board-game moves, `mm`, `db`, `bs`, `hm`, `tv`, `dg`, `tr`, `qd`) and plays
+those from its view, next to the effect it already shows for that moment. A scenario can set `chance` (how
+often it makes a sound at all, so ordinary moves stay a treat) and `maxSecs` (cut the clip there). The move
+that ends a game plays only the room's win/lose/draw sound. `test/sound-events.test.js` scans the code and
+fails if an id is played that is not mapped, or mapped but never played.
 
 A game plays its own moments by calling `play('<scenario id>')` from `js/sound.js`. A game that plays
 its win/lose/draw sound after its animation sets `ownsResultSound: true` in `js/games.js`; otherwise the

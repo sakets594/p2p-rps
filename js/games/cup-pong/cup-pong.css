@@ -41,7 +41,7 @@
 
 .cp-ov { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; transition: opacity .5s; }
 .cp-ov.hidden { opacity: 0; pointer-events: none; }
-.cp-intro { background: rgba(31,36,52,.55); backdrop-filter: blur(6px); align-content: center; gap: 22px; }
+.cp-intro { background: rgba(31,36,52,.78); align-content: center; gap: 22px; }
 .cp-intro-cards { display: flex; gap: 14px; }
 .cp-big { width: 112px; background: var(--cp-card); color: var(--cp-ink); border-radius: 18px; padding: 14px 8px 8px; text-align: center; box-shadow: 0 5px 0 rgba(0,0,0,.3); }
 .cp-big .cp-av { width: 70px; height: 70px; font-size: 32px; margin-bottom: 8px; }
@@ -58,7 +58,18 @@
 .cp-needle::after { content: ""; position: absolute; left: -3px; top: 0; width: 16px; height: 16px; border-radius: 50%; background: #ef6a6a; }
 .cp-who { background: #4b3a68; padding: 7px 20px; border-radius: 12px; font-weight: 900; letter-spacing: .08em; max-width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: background .3s, transform .3s; }
 .cp-who.win { background: var(--cp-accent); transform: scale(1.15); }
-.cp-end { background: rgba(18,22,28,.7); backdrop-filter: blur(4px); align-content: center; gap: 10px; text-align: center; padding: 0 16px; }
+.cp-end { background: rgba(18,22,28,.82); align-content: center; gap: 10px; text-align: center; padding: 0 16px; }
 .cp-end h2 { margin: 0; font-size: 34px; letter-spacing: .06em; }
 .cp-end p { margin: 0; opacity: .85; }
 .cp-notice { background: rgba(18,22,28,.78); align-content: center; text-align: center; padding: 0 28px; font-weight: 700; line-height: 1.4; }
+
+/* Fight-night type and a darker bar palette to match the new room scene (view.js paints the wall, lights and table). */
+.cp-root { background: #1b0f2e; border: 3px solid #07040f; box-shadow: 0 6px 0 #07040f; }
+.cp-msg, .cp-pillbig, .cp-who, .cp-round-txt, .cp-start, .cp-end h2, .cp-nm, .cp-sc { font-family: var(--font-game, system-ui); font-weight: 400; }
+.cp-msg { font-size: 24px; background: linear-gradient(180deg, #ffe066, #ffb703); color: #1a0b00; border: 3px solid #07040f; }
+.cp-pcard { background: #24163f; color: #fff; border: 3px solid #07040f; }
+.cp-pcard.active { border-color: #ffd65a; }
+.cp-round { background: #07040f; border: 2px solid #ff3d9a; }
+.cp-end h2 { font-size: 40px; color: #ffd65a; -webkit-text-stroke: 2px #07040f; paint-order: stroke fill; text-shadow: 4px 4px 0 #07040f; }
+.cp-intro, .cp-end, .cp-notice { background: rgba(14, 6, 28, .82); }
+.cp-dial { background: #fff3d6; border: 4px solid #07040f; }

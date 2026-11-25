@@ -1,0 +1,46 @@
+/* Shared motion pieces from js/juice.js. The host element must be position: relative (or absolute/fixed).
+   Themes are classes on the card: neon, western, marker, stage. No blurred shadows on animated text (Firefox stalls). */
+
+.jc-card {
+  position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; pointer-events: none; overflow: hidden;
+  container-type: inline-size; /* titles size to the card, so long names fit a phone-width game */
+  --jc-band: var(--gold); --jc-ink: var(--ink); --jc-fg: #fff;
+}
+.jc-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); will-change: opacity; }
+.jc-band {
+  will-change: transform;
+  position: absolute; left: -10%; right: -10%; top: 50%; height: 44%; translate: 0 -50%; rotate: -4deg;
+  background: var(--jc-band); border-block: 5px solid var(--jc-ink);
+}
+.jc-text { position: relative; text-align: center; padding: 0 12px; }
+.jc-kicker { font: 800 .95rem/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--jc-ink); margin-bottom: 6px; }
+.jc-title {
+  font: 400 clamp(1.5rem, 10.5cqi, 3.6rem)/1 var(--font-game); color: var(--jc-fg); white-space: nowrap;
+  -webkit-text-stroke: 4px var(--jc-ink); paint-order: stroke fill; text-shadow: 4px 4px 0 var(--jc-ink);
+}
+.jc-title > div { display: inline-block; will-change: transform, opacity; }
+.jc-sub { font: 700 1rem/1.2 var(--font); color: var(--jc-ink); margin-top: 8px; }
+.jc-sub:empty, .jc-kicker:empty { display: none; }
+
+.jc-card.neon { --jc-band: linear-gradient(90deg, #ff2bd6, #7a5cff 50%, #00e5ff); --jc-ink: #05010f; }
+.jc-card.neon .jc-title { font-family: var(--font-neon); font-weight: 900; letter-spacing: .04em; }
+.jc-card.western { --jc-band: #f3d9a4; --jc-ink: #3b1f0e; --jc-fg: #ffcf4a; }
+.jc-card.western .jc-band { background-image: repeating-linear-gradient(90deg, transparent 0 22px, rgba(59, 31, 14, .08) 22px 24px); }
+.jc-card.western .jc-title { font-family: var(--font-western); letter-spacing: .02em; }
+.jc-card.marker { --jc-band: #fffdf6; --jc-ink: #1b1b2f; --jc-fg: #ff4d6d; }
+.jc-card.marker .jc-band { rotate: -2deg; background-image: repeating-linear-gradient(transparent 0 26px, #cfe3ff 26px 28px); }
+.jc-card.marker .jc-title { font-family: var(--font-marker); }
+.jc-card.stage { --jc-band: #b3122e; --jc-ink: #1a0508; --jc-fg: #ffd23f; }
+.jc-card.stage .jc-band { background-image: repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 10px, transparent 10px 30px); }
+.jc-card.stage .jc-title { font-family: var(--font-cartoon); letter-spacing: .03em; }
+
+.jc-stamp {
+  position: absolute; left: 50%; top: 50%; z-index: 30; translate: -50% -50%; pointer-events: none; white-space: nowrap;
+  font: 400 clamp(1.8rem, 9vw, 2.6rem)/1 var(--font-game); text-transform: uppercase; letter-spacing: .04em;
+  color: var(--good); border: 5px solid currentColor; border-radius: 12px; padding: 6px 16px 4px; background: rgba(255, 255, 255, .88);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.jc-stamp.bad { color: var(--bad); }
+.jc-stamp.gold { color: #c98a00; }
+
+.jc-wipe { position: absolute; inset: 0; z-index: 50; pointer-events: none; }

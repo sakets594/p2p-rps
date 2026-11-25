@@ -1,5 +1,6 @@
 node_modules/
 .DS_Store
-.claude/
+.claude/*
+!.claude/skills/
 brag-output/
 graphify-out/

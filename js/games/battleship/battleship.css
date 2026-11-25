@@ -1,24 +1,89 @@
-/* Battleship screen. Colors come from css/style.css. */
+/* Battleship as a naval war room. Their waters: a green radar screen with a sweeping beam (a rotating conic
+   gradient, compositor-only). Your fleet: a rolling sea (a translated wave layer) with grey hulls that have a bow
+   and a stern. Shells fly in a layer over everything. Keeps its own colours in light and dark mode.
+   No animated blurred shadows (Firefox). */
 
-.bs { display: flex; flex-direction: column; gap: 12px; }
-.bs h3 { margin: 0 0 4px; font-size: .95rem; color: var(--muted); font-weight: 600; }
-.bs-status { margin: 0; text-align: center; font-size: 1.2rem; min-height: 1.8em; }
-.bs-status.win { color: var(--good); } .bs-status.lose { color: var(--bad); }
+.bs { position: relative; display: flex; flex-direction: column; gap: 12px; }
+.bs.navy {
+  padding: var(--s-3); border-radius: 18px; color: #dbe7f5;
+  background: radial-gradient(circle at 8px 8px, #8fa3b8 0 2px, transparent 2.5px) 0 0 / 100% 100% no-repeat,
+    linear-gradient(180deg, #2b3a4d, #1a2533);
+  border: 3px solid #0b1118; border-bottom-width: 9px; /* a border, not a box-shadow: a big inset shadow repaints under the beam and halves the frame rate in Firefox */
+}
+.bs h3 { margin: 0 0 6px; font: 700 .78rem/1 var(--font-neon); letter-spacing: .14em; text-transform: uppercase; color: #8fd7a8; }
+.bs-status { margin: 0; text-align: center; font: 1.15rem/1.3 var(--font-game); letter-spacing: .02em; min-height: 1.6em; color: #fff; }
+.bs-status.win { color: #7dffb0; } .bs-status.lose { color: #ff8f8f; }
 .bs-actions { display: flex; gap: 10px; } .bs-actions > * { flex: 1; }
-.bs-error { color: var(--bad); text-align: center; margin: 0; }
+.bs-actions[hidden] { display: none; }
+.bs-actions button { font: 1rem/1 var(--font-game); letter-spacing: .02em; border: 3px solid #0b1118; box-shadow: 0 4px 0 #0b1118; }
+.bs-shuffle { background: #46586e; color: #fff; }
+.bs-ready { background: linear-gradient(180deg, #ffe066, #ffb703); color: #1a0b00; }
+.bs-error { color: #ff8f8f; text-align: center; margin: 0; }
+.bs-enemy-wrap[hidden] { display: none; }
 
-.bs-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; padding: 4px; border-radius: 10px; background: #1b6aa5; }
-.bs-grid.small { max-width: 260px; }
-.bs-cell { --lift: 0px; min-height: 0; box-shadow: none; aspect-ratio: 1; padding: 0; border: 0; border-radius: 3px; background: rgba(255, 255, 255, .16); position: relative; font-size: .8rem; line-height: 1; }
+/* Fleet status: one little hull per ship still afloat */
+.bs-hud { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+.bs-fleet { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border-radius: 10px; background: #0f1823; border: 2px solid #46586e; min-width: 0; }
+.bs-fleet.them { align-items: flex-end; }
+.bs-fleet b { font: 400 .95rem/1.1 var(--font-game); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.bs-fleet.me b { color: #ff9eb5; } .bs-fleet.them b { color: #8fd3ff; }
+.bs-ships { display: flex; gap: 4px; }
+.bs-ships i { width: 18px; height: 7px; border-radius: 1px 7px 7px 1px; background: #b8c4d2; border: 1.5px solid #0b1118; }
+.bs-ships i.down { background: #5a2525; opacity: .55; }
+.bs-vs { font-size: 1.6rem; }
+
+/* The radar */
+.bs-radar { position: relative; padding: 6px; overflow: hidden; background: #062014; border: 3px solid #1d5a3a; } /* square: a rounded clip around a moving layer is slow */
+.bs-sweep {
+  position: absolute; left: 50%; top: 50%; width: 142%; aspect-ratio: 1; translate: -50% -50%; pointer-events: none; z-index: 2; opacity: .55;
+  background: conic-gradient(from 0deg, rgba(87, 255, 160, .5), rgba(87, 255, 160, 0) 60deg, transparent 360deg);
+  animation: bs-sweep 3.2s linear infinite; will-change: rotate;
+}
+@keyframes bs-sweep { to { rotate: 360deg; } }
+.bs.navy .bs-enemy { position: relative; z-index: 1; gap: 0; padding: 0;
+  background: linear-gradient(rgba(87, 255, 160, .22) 1px, transparent 1px) 0 0 / 10% 10%, linear-gradient(90deg, rgba(87, 255, 160, .22) 1px, transparent 1px) 0 0 / 10% 10%; } /* one painted grid, not 100 bordered cells */
+.bs.navy .bs-enemy .bs-cell { background: transparent; border: 0; border-radius: 2px; }
+.bs.my-turn .bs-enemy .bs-cell:not(:disabled) { cursor: crosshair; }
+.bs.navy button.bs-cell:hover:not(:disabled) { background: rgba(87, 255, 160, .35); border-color: #57ffa0; }
+.bs.navy .bs-enemy .bs-cell.pending { background: #ffcf4a; animation: bs-blink .3s steps(2) infinite; }
+.bs.navy .bs-enemy .bs-cell.unhit { background: rgba(200, 220, 255, .3); }
+@keyframes bs-blink { 50% { opacity: .3; } }
+
+/* The sea */
+.bs-sea { position: relative; max-width: 300px; margin-inline: auto; padding: 6px; overflow: hidden; background: #1667a8; border: 3px solid #0b1118; }
+.bs-waves {
+  position: absolute; inset: -20px -40px; pointer-events: none; opacity: .35; will-change: translate;
+  background: radial-gradient(ellipse 14px 4px at 50% 60%, transparent 70%, #bfe6ff 72% 88%, transparent 90%) 0 0 / 28px 16px;
+  animation: bs-roll 3s linear infinite;
+}
+@keyframes bs-roll { to { translate: 28px 8px; } }
+.bs.navy .bs-mine { position: relative; gap: 0; padding: 0; background: transparent; max-width: none; }
+.bs.navy .bs-mine .bs-cell { background: transparent; border-radius: 0; }
+.bs.navy .bs-cell.ship { background: linear-gradient(180deg, #d5dde8, #9aa8b9); border: 1.5px solid #0b1118; }
+.bs.navy .bs-cell.ship.h { border-left-width: 0; border-right-width: 0; } .bs.navy .bs-cell.ship.v { border-top-width: 0; border-bottom-width: 0; }
+.bs.navy .bs-cell.ship.v { background: linear-gradient(90deg, #d5dde8, #9aa8b9); }
+.bs.navy .bs-cell.ship.h.bow { border-left-width: 1.5px; border-radius: 50% 0 0 50%; } .bs.navy .bs-cell.ship.h.stern { border-right-width: 1.5px; border-radius: 0 4px 4px 0; }
+.bs.navy .bs-cell.ship.v.bow { border-top-width: 1.5px; border-radius: 50% 50% 0 0; } .bs.navy .bs-cell.ship.v.stern { border-bottom-width: 1.5px; border-radius: 0 0 4px 4px; }
+
+/* Shots */
+.bs-cell { --lift: 0px; min-height: 0; box-shadow: none; aspect-ratio: 1; padding: 0; border: 0; border-radius: 3px; position: relative; font-size: .8rem; line-height: 1; }
 .bs-cell:disabled { opacity: 1; cursor: default; }
-button.bs-cell:hover:not(:disabled) { background: rgba(255, 255, 255, .4); border: 0; }
-.bs-cell.ship { background: #dfe5ee; }
-.bs-cell.miss::after { content: ""; position: absolute; inset: 35%; border-radius: 50%; background: #fff; opacity: .85; }
-.bs-cell.hit { background: var(--bad); }
-.bs-cell.hit::after { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 700; }
-.bs-cell.pending { background: #f5c542; }
-.bs-cell.unhit { background: #dfe5ee; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5); }
-
-.bs-cell.hit, .bs-cell.miss { animation: bs-pop .35s cubic-bezier(.3, 1.5, .5, 1); }
+.bs-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+.bs-cell.miss::after { content: ""; position: absolute; inset: 32%; border-radius: 50%; background: #fff; opacity: .9; border: 1.5px solid #0b1118; }
+.bs-cell.hit:not(.flying) { background: #7a1f1f !important; }
+.bs-cell.hit::after { content: "🔥"; position: absolute; inset: -20%; display: grid; place-items: center; font-size: 1.05em; animation: bs-burn .5s ease-in-out infinite alternate; }
+.bs-mine .bs-cell.hit::after { font-size: .85em; }
+@keyframes bs-burn { to { translate: 0 -2px; } }
+.bs-cell.flying::after { display: none; }
+.bs-cell.hit:not(.flying), .bs-cell.miss:not(.flying) { animation: bs-pop .35s cubic-bezier(.3, 1.5, .5, 1); }
 @keyframes bs-pop { from { transform: scale(.2); } to { transform: none; } }
-@media (prefers-reduced-motion: reduce) { .bs-cell.hit, .bs-cell.miss { animation: none; } }
+.bs-target { position: absolute; inset: -30%; z-index: 3; border: 2px solid #ff5a5a; border-radius: 50%; animation: bs-lock .56s ease-in forwards; pointer-events: none; }
+@keyframes bs-lock { from { scale: 2.2; opacity: 0; } to { scale: .7; opacity: 1; } }
+
+.bs-shells { position: absolute; inset: 0; pointer-events: none; z-index: 20; overflow: visible; }
+.bs-shell { position: absolute; left: 0; top: 0; width: 18px; height: 7px; margin: -3.5px 0 0 -9px; border-radius: 2px 6px 6px 2px; background: #2b2b2b; border: 1.5px solid #ffcf4a; }
+.bs-shell::before { content: ''; position: absolute; right: 100%; top: 1px; width: 16px; height: 3px; background: linear-gradient(90deg, transparent, rgba(255, 200, 80, .9)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bs-sweep, .bs-waves, .bs-cell.hit::after, .bs-cell.hit, .bs-cell.miss { animation: none; }
+}

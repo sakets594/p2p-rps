@@ -13,6 +13,7 @@ import {PARAMS as P, RULES} from './match.js';
 import {shapeThrow, ASSIST_DEFAULTS} from './aim-assist.js';
 import {play} from '../../sound.js';
 import {matchEndScenario, throwScenario} from '../../sound-events.js';
+import {synth} from '../../synth.js';
 
 // Swipe input: power comes from the swipe LENGTH (screen heights), which must finish within timeMs.
 const S = {minLen: 0.08, maxLen: 0.42, timeMs: 500, angleRange: 50, angleStep: 1.25, grab: 2.6};
@@ -104,15 +105,43 @@ export function mountCupPongView({container, match}) {
 
   // ---- canvas + projection ---------------------------------------------------------------------------
   let W = 0, H = 0, dpr = 1;
+  let bg = null; // the room behind the table, painted once per size (a bar at night: wall, neon sign, string lights)
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     const r = canvas.getBoundingClientRect();
     W = r.width; H = r.height;
     canvas.width = Math.max(1, Math.round(W * dpr)); canvas.height = Math.max(1, Math.round(H * dpr));
+    bg = paintRoom();
+  }
+  const BULBS = 11;
+  const bulbAt = (i) => { const t = i / (BULBS - 1); return [W * (0.04 + 0.92 * t), H * 0.035 + Math.sin(t * Math.PI) * H * 0.07]; };
+  function paintRoom() {
+    if (!W || !H || typeof document === 'undefined') return null;
+    const c = document.createElement('canvas');
+    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const wall = g.createLinearGradient(0, 0, 0, H * 0.6); wall.addColorStop(0, '#1b0f2e'); wall.addColorStop(1, '#3a1f2c');
+    g.fillStyle = wall; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(255,255,255,.04)'; g.lineWidth = 2;
+    for (let x = 0; x < W; x += 26) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H * 0.6); g.stroke(); }
+    // A neon sign on the back wall (blurred once here, never per frame).
+    g.save(); g.font = `400 ${Math.round(W * 0.07)}px Bungee, system-ui, sans-serif`; g.textAlign = 'center';
+    g.shadowColor = '#ff3d9a'; g.shadowBlur = 18; g.fillStyle = '#ffd1ec'; g.fillText('CUP PONG', W / 2, H * 0.17);
+    g.shadowBlur = 6; g.fillText('CUP PONG', W / 2, H * 0.17); g.restore();
+    // The string the lights hang on.
+    g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.5; g.beginPath();
+    for (let i = 0; i < BULBS; i++) { const [x, y] = bulbAt(i); if (i) g.lineTo(x, y); else g.moveTo(x, y); }
+    g.stroke();
+    // The floor glow under the table.
+    const floor = g.createRadialGradient(W / 2, H * 0.95, 0, W / 2, H * 0.95, W * 0.8); floor.addColorStop(0, 'rgba(255,190,120,.25)'); floor.addColorStop(1, 'rgba(255,190,120,0)');
+    g.fillStyle = floor; g.fillRect(0, 0, W, H);
+    return c;
   }
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
   ro?.observe(canvas);
   resize();
+  document.fonts?.load('400 20px Bungee').then(() => { if (!destroyed) bg = paintRoom(); }, () => {}); // the sign's font may arrive after the first paint
   function project(x, y, z) {
     const sp = Math.sin(CAM.pitch), cp = Math.cos(CAM.pitch);
     const Y = y - CAM.y, Z = z - CAM.z;
@@ -155,6 +184,12 @@ export function mountCupPongView({container, match}) {
     c.alive = false; c.lift = 0; c.sc = 1;
   }
   const poof = (x, y, z) => vs.fx.push({kind: 'poof', x, y, z, t0: performance.now()});
+  const splash = (x, y, z) => {
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2; const v = 0.3 + Math.random() * 0.6;
+      vs.fx.push({kind: 'drop', x, y, z, vx: Math.cos(a) * v * 0.5, vy: 1 + Math.random() * 1.4, vz: Math.sin(a) * v * 0.5, t0: performance.now()});
+    }
+  };
   function confetti() { for (let i = 0; i < 60; i++) vs.fx.push({kind: 'conf', t0: performance.now(), vx: (Math.random() - 0.5) * 700, vy: -(200 + Math.random() * 500), x: W / 2, y: H * 0.35, hue: Math.random() * 360}); }
 
   // ---- drawing --------------------------------------------------------------------------------------------
@@ -181,17 +216,39 @@ export function mountCupPongView({container, match}) {
   let swipe = null;
   function drawScene(now) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.clearRect(0, 0, W, H);
-    const sky = ctx.createLinearGradient(0, 0, 0, H * 0.7); sky.addColorStop(0, '#9fc9dc'); sky.addColorStop(0.6, '#e6e0c8'); sky.addColorStop(1, '#d9b79a'); ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'rgba(120,150,170,.35)'; ctx.beginPath(); const hz = project(0, 0, P.tableZ1 + 0.4)[1]; ctx.moveTo(0, hz); for (let i = 0; i <= 8; i++) ctx.lineTo(W * i / 8, hz - 18 - 14 * Math.sin(i * 1.7)); ctx.lineTo(W, hz + 40); ctx.lineTo(0, hz + 40); ctx.fill();
+    if (bg) ctx.drawImage(bg, 0, 0, W, H); else { ctx.fillStyle = '#1b0f2e'; ctx.fillRect(0, 0, W, H); }
+    // String lights: each bulb glows and gently flickers (plain circles, no blur).
+    for (let i = 0; i < BULBS; i++) {
+      const [x, y] = bulbAt(i);
+      const a = 0.55 + 0.45 * Math.sin(now / 420 + i * 1.9);
+      ctx.fillStyle = `rgba(255,200,90,${0.18 * a})`; ctx.beginPath(); ctx.arc(x, y + 6, 11, 0, 7); ctx.fill();
+      ctx.fillStyle = i % 3 === 0 ? '#ff8fb8' : i % 3 === 1 ? '#ffd65a' : '#8fe3ff'; ctx.beginPath(); ctx.arc(x, y + 6, 4, 0, 7); ctx.fill();
+    }
     const hw = P.tableHalfW, z0 = P.tableZ0, z1 = P.tableZ1;
     const tbl = [[-hw, 0, z0], [hw, 0, z0], [hw, 0, z1], [-hw, 0, z1]].map((q) => project(...q));
-    const tg = ctx.createLinearGradient(0, tbl[3][1], 0, tbl[0][1]); tg.addColorStop(0, '#d7a2d9'); tg.addColorStop(0.5, '#f0b9a8'); tg.addColorStop(1, '#f6d99a');
-    ctx.beginPath(); tbl.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.fillStyle = tg; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 4; ctx.stroke();
+    // The table's front edge, so it reads as a solid slab of wood.
+    const edge = [[-hw, 0, z0], [hw, 0, z0], [hw, -0.05, z0], [-hw, -0.05, z0]].map((q) => project(...q));
+    ctx.beginPath(); edge.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.fillStyle = '#4a2612'; ctx.fill();
+    const tg = ctx.createLinearGradient(0, tbl[3][1], 0, tbl[0][1]); tg.addColorStop(0, '#6b3a1c'); tg.addColorStop(0.55, '#a5652f'); tg.addColorStop(1, '#c98a4a');
+    ctx.beginPath(); tbl.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.fillStyle = tg; ctx.fill();
+    ctx.strokeStyle = 'rgba(60,25,8,.35)'; ctx.lineWidth = 1.2; // planks
+    for (let k = 1; k < 6; k++) { const x = -hw + (2 * hw * k) / 6; const [ax, ay] = project(x, 0, z0); const [bx, by] = project(x, 0, z1); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); }
+    const [m0x, m0y] = project(0, 0, z0); const [m1x, m1y] = project(0, 0, z1); // painted centre line
+    ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 3; ctx.setLineDash([10, 10]); ctx.beginPath(); ctx.moveTo(m0x, m0y); ctx.lineTo(m1x, m1y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); tbl.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.strokeStyle = '#fff3d6'; ctx.lineWidth = 4; ctx.stroke();
     if (vs.turn !== null && vs.started) {
       const col = colorsFor(1 - vs.turn);
       target().filter((c) => c.alive).sort((a, b) => b.z - a.z).forEach((c) => drawCup(c, col));
     }
-    if (vs.flight) drawBall(vs.flight.pos);
+    if (vs.flight) {
+      // A fading trail behind the ball in flight.
+      vs.flight.trail.forEach((q, i, all) => {
+        const [tx, ty, ts] = project(...q);
+        ctx.fillStyle = `rgba(255,240,200,${0.35 * (i + 1) / all.length})`;
+        ctx.beginPath(); ctx.arc(tx, ty, Math.max(1.5, P.ballR * ts * (0.4 + 0.6 * (i + 1) / all.length)), 0, 7); ctx.fill();
+      });
+      drawBall(vs.flight.pos);
+    }
     else if (vs.ballVisible && !vs.over) {
       const pos = [0, P.releaseH, 0]; drawBall(pos, vs.ballScale);
       if (vs.canThrow) {
@@ -209,9 +266,16 @@ export function mountCupPongView({container, match}) {
         }
       }
     }
-    vs.fx = vs.fx.filter((f) => now - f.t0 < (f.kind === 'poof' ? 500 : 1800));
+    const life = (f) => (f.kind === 'poof' ? 500 : f.kind === 'drop' ? 700 : 1800);
+    vs.fx = vs.fx.filter((f) => now - f.t0 < life(f));
     for (const f of vs.fx) {
-      const k = (now - f.t0) / (f.kind === 'poof' ? 500 : 1800);
+      const k = (now - f.t0) / life(f);
+      if (f.kind === 'drop') { // a drop of beer-pong water flying out of the cup
+        const t = (now - f.t0) / 1000;
+        const [dx, dy, ds] = project(f.x + f.vx * t, Math.max(0, f.y + f.vy * t - 4.9 * t * t), f.z + f.vz * t);
+        ctx.fillStyle = `rgba(170,225,255,${1 - k})`; ctx.beginPath(); ctx.arc(dx, dy, Math.max(1.5, 0.006 * ds), 0, 7); ctx.fill();
+        continue;
+      }
       if (f.kind === 'poof') { const [px, py, ps] = project(f.x, f.y, f.z); ctx.strokeStyle = `rgba(255,255,255,${1 - k})`; ctx.lineWidth = 4 * (1 - k) + 1; ctx.beginPath(); ctx.arc(px, py, P.ballR * ps * (1 + 4 * ease.out(k)), 0, 7); ctx.stroke(); }
       else { const t = (now - f.t0) / 1000; ctx.fillStyle = `hsla(${f.hue},85%,60%,${1 - k})`; ctx.fillRect(f.x + f.vx * t, f.y + f.vy * t + 900 * t * t, 7, 5); }
     }
@@ -295,6 +359,8 @@ export function mountCupPongView({container, match}) {
     if (ev.hit) {
       const c = rack[ev.cup];
       poof(c.x, P.cupH, c.z);
+      splash(c.x, P.cupH, c.z);
+      synth.splash();
       vs.scores = ev.after.scores; bump(ev.seat === seat); updateHud();
       await wait(400); await liftOutCup(c); await wait(500);
     } else {
@@ -319,10 +385,17 @@ export function mountCupPongView({container, match}) {
 
   function playFlight(sim) {
     const f = sim.frames, n = f.length / 3;
-    vs.flight = {pos: [0, P.releaseH, 0]};
+    // Frames where the ball touches the table and bounces back up: a click plays as it passes each one.
+    const bounces = [];
+    for (let i = 1; i < n - 1; i++) { const y = f[i * 3 + 1]; if (y < P.ballR * 1.6 && y <= f[(i - 1) * 3 + 1] && y < f[(i + 1) * 3 + 1]) bounces.push(i); }
+    let nextBounce = 0;
+    vs.flight = {pos: [0, P.releaseH, 0], trail: []};
+    synth.whoosh(0.3);
     return tween(Math.max(300, (n - 1) / 60 * 1000), (k) => {
       const x = k * (n - 1), i = Math.min(n - 1, Math.floor(x)), j = Math.min(n - 1, i + 1), t = x - i;
       vs.flight.pos = [0, 1, 2].map((q) => f[i * 3 + q] + (f[j * 3 + q] - f[i * 3 + q]) * t);
+      vs.flight.trail.push(vs.flight.pos); if (vs.flight.trail.length > 9) vs.flight.trail.shift();
+      while (nextBounce < bounces.length && x >= bounces[nextBounce]) { nextBounce++; synth.blip(380); }
     }).then(() => { vs.flight = null; });
   }
 

@@ -15,7 +15,7 @@ test('registry: every entry has what the card needs', () => {
     assert.ok(g.tags.length > 0, g.id);
     assert.ok(['ready', 'soon'].includes(g.status), g.id);
     assert.ok(Number.isInteger(g.minPlayers) && g.minPlayers >= 2 && g.maxPlayers >= g.minPlayers, g.id);
-    assert.ok(g.layout === undefined || ['column', 'wide'].includes(g.layout), g.id);
+    assert.ok(g.layout === undefined || ['column', 'wide', 'immersive'].includes(g.layout), g.id);
   }
 });
 

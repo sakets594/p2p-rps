@@ -6,7 +6,8 @@
 //   tags    categories shown as pills and used by the tag filter
 //   status  'ready' is playable; 'soon' shows a "Coming soon" card that cannot be opened
 //   minPlayers / maxPlayers   how many people it takes (the room is two people for now)
-//   layout  'column' (default, the 460px column) or 'wide' (a big stage, e.g. a 3D table)
+//   layout  'column' (default, the 460px column), 'wide' (a big stage, e.g. a 3D table) or 'immersive'
+//           (a game that paints its own full scene: a wider column, no card frame around it)
 //   resumable  true if the game can carry on after a short disconnect (it keeps its own log)
 //   ownsResultSound  true if the game plays its own win/lose/draw sound after its animation;
 //           otherwise the room plays it the moment the game reports a result (js/sound-events.js)
@@ -69,6 +70,7 @@ export const GAMES = [
     maxPlayers: 2,
     blurb: 'Hide your fleet, guess theirs.',
     status: 'ready',
+    ownsResultSound: true,
     load: () => import('./games/battleship/index.js'),
   },
   {
@@ -114,6 +116,71 @@ export const GAMES = [
     blurb: 'Same questions, fastest right answer wins.',
     status: 'ready',
     load: () => import('./games/trivia-duel/index.js'),
+  },
+  {
+    id: 'draw-guess',
+    title: 'Draw & Guess',
+    icon: '🎨',
+    tags: ['Party', 'Drawing', 'Word'],
+    minPlayers: 2,
+    maxPlayers: 2,
+    blurb: 'Draw a secret word, your friend guesses it. Faster guess, more points.',
+    status: 'ready',
+    layout: 'immersive',
+    ownsResultSound: true,
+    load: () => import('./games/draw-guess/index.js'),
+  },
+  {
+    id: 'blind-draw',
+    title: 'Blind Draw',
+    icon: '🙈',
+    tags: ['Party', 'Drawing'],
+    minPlayers: 2,
+    maxPlayers: 2,
+    blurb: 'Draw & Guess, but you can’t see your own lines until the round ends.',
+    status: 'ready',
+    layout: 'immersive',
+    ownsResultSound: true,
+    load: () => import('./games/draw-guess/blind.js'),
+  },
+  {
+    id: 'emoji-charades',
+    title: 'Emoji Charades',
+    icon: '🎭',
+    tags: ['Party', 'Word'],
+    minPlayers: 2,
+    maxPlayers: 2,
+    blurb: 'Act out a movie, food or place using only emoji. Fewer emoji, more points.',
+    status: 'ready',
+    layout: 'immersive',
+    ownsResultSound: true,
+    load: () => import('./games/emoji-charades/index.js'),
+  },
+  {
+    id: 'tron',
+    title: 'Light Cycles',
+    icon: '🏍️',
+    tags: ['Arcade', 'Quick'],
+    minPlayers: 2,
+    maxPlayers: 2,
+    blurb: 'Steer your glowing trail and box your friend in. Hit anything and you crash.',
+    status: 'ready',
+    layout: 'immersive',
+    ownsResultSound: true,
+    load: () => import('./games/tron/index.js'),
+  },
+  {
+    id: 'quick-draw',
+    title: 'Quick Draw',
+    icon: '🤠',
+    tags: ['Arcade', 'Quick', 'Party'],
+    minPlayers: 2,
+    maxPlayers: 2,
+    blurb: 'A desert standoff. Wait for DRAW, fire first, and don’t jump the gun.',
+    status: 'ready',
+    layout: 'immersive',
+    ownsResultSound: true,
+    load: () => import('./games/quick-draw/index.js'),
   },
 ];
 

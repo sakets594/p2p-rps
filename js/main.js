@@ -4,9 +4,9 @@ import {Room} from './room.js';
 import {createTransport} from './net.js';
 import {createStore} from './storage.js';
 import {allTags, filterGames, findGame, playersLabel} from './games.js';
-import {isMuted, play, setMuted, unlock} from './sound.js';
+import {isMuted, play, setMuted, soundLog, unlock} from './sound.js';
 import {soundsForChange} from './sound-events.js';
-import {fxForScenario, mountTunePanel} from './fx.js';
+import {fxForScenario, mountJankProbe, mountTunePanel, warmUp} from './fx.js';
 
 const $ = (id) => document.getElementById(id);
 const HINT_AFTER_MS = 20_000;
@@ -203,7 +203,7 @@ function setQr(open) {
 const INCOMPATIBLE = 'Your friend is using a different version of the app. Ask them to refresh the page, and refresh yours too.';
 
 function render(s) {
-  for (const id of soundsForChange(lastSnap, s)) { play(id); fxForScenario(id)?.(); }
+  for (const id of soundsForChange(lastSnap, s)) { soundLog('room moment:', id); play(id); fxForScenario(id)?.(); }
   lastSnap = s;
   const them = s.opponentName ?? 'Friend';
   $('room-title').textContent = s.roomName ?? 'Room';
@@ -256,6 +256,7 @@ function render(s) {
   $('game-away').hidden = !(playing && s.away);
   $('btn-again').hidden = !(playing && s.session.result);
   document.querySelector('main').classList.toggle('wide', game?.layout === 'wide');
+  document.querySelector('main').classList.toggle('immersive', playing && game?.layout === 'immersive');
 
   syncGame(s);
 }
@@ -282,6 +283,11 @@ async function mountGame(session) {
     const instance = await mod.createGame({session, container});
     if (hosted !== entry) { instance?.destroy?.(); return; } // ended while loading
     entry.instance = instance;
+    // The game arrives with a short rise-and-settle instead of popping in.
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      container.animate([{opacity: 0, transform: 'translateY(24px) scale(.97)'}, {opacity: 1, transform: 'none'}],
+        {duration: 420, easing: 'cubic-bezier(.2, 1.3, .4, 1)'});
+    }
   } catch (err) {
     console.error(err);
     if (hosted === entry) {
@@ -370,7 +376,7 @@ function renderSoundButton() {
 setMuted(store.soundMuted());
 renderSoundButton();
 for (const type of ['pointerdown', 'keydown']) {
-  addEventListener(type, () => unlock(), {once: true, capture: true});
+  addEventListener(type, () => { soundLog(`first ${type}: unlocking audio`); unlock(); warmUp(); }, {once: true, capture: true});
 }
 $('btn-sound').addEventListener('click', () => {
   setMuted(!isMuted());
@@ -429,3 +435,4 @@ renderCatalog();
 renderRecents();
 
 if (new URLSearchParams(location.search).has('tune')) mountTunePanel().catch(() => {});
+if (new URLSearchParams(location.search).has('sounddebug')) mountJankProbe(soundLog);

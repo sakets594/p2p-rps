@@ -2,15 +2,16 @@
    score header other word/quiz games reuse. Colors, shape and depth come from css/tokens.css. */
 
 .tg { display: flex; flex-direction: column; gap: var(--s-4); }
-.tg-head { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+.tg.themed { position: relative; } /* title cards (js/juice.js) cover the game */
+.tg-head { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
 /* A player chip: filled with the seat's color, the one whose turn it is rises off the page. */
-.tg-p { --chip: var(--seat-a); display: flex; flex-direction: column; align-items: center; padding: 8px 6px 6px; border: var(--bw-heavy) solid var(--edge); border-radius: var(--r-md); min-width: 0;
+.tg-p { --chip: var(--seat-a); display: flex; flex-direction: column; align-items: center; padding: var(--s-2); border: var(--bw-heavy) solid var(--edge); border-radius: var(--r-md); min-width: 0;
   background: var(--card); color: var(--fg); position: relative; transition: transform var(--t) var(--ease-pop), box-shadow var(--t), background var(--t); }
 .tg-p[data-slot="1"] { --chip: var(--seat-b); }
-.tg-p::before { content: ""; position: absolute; top: -9px; left: 10px; width: 16px; height: 16px; border-radius: 50%; background: var(--chip); border: var(--bw) solid var(--edge); }
+.tg-p::before { content: ""; position: absolute; top: -8px; left: 12px; width: 16px; height: 16px; border-radius: 50%; background: var(--chip); border: var(--bw) solid var(--edge); }
 .tg-p::after { content: ""; position: absolute; box-sizing: border-box; border-radius: 50%; }
-.tg-p[data-slot="0"]::after { top: -9px; left: 10px; width: 16px; height: 16px; border: 4px solid rgba(255, 255, 255, .9); } /* seat A: ring */
-.tg-p[data-slot="1"]::after { top: -4px; left: 15px; width: 6px; height: 6px; background: rgba(255, 255, 255, .95); }      /* seat B: dot */
+.tg-p[data-slot="0"]::after { top: -8px; left: 12px; width: 16px; height: 16px; border: 4px solid var(--mark); } /* seat A: ring */
+.tg-p[data-slot="1"]::after { top: -3px; left: 17px; width: 6px; height: 6px; background: var(--mark); }      /* seat B: dot */
 .tg-p b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tg-p .tg-score { font-size: 1.6rem; font-weight: 800; line-height: 1.1; }
 .tg-p.active { background: var(--chip); color: var(--on-seat); transform: translateY(-3px); box-shadow: 0 var(--lift) 0 var(--edge); }
@@ -20,7 +21,7 @@
 .tg-error { color: var(--bad); text-align: center; margin: 0; }
 
 /* Tic-Tac-Toe */
-.ttt-board { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ttt-board { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }
 .ttt-cell { aspect-ratio: 1; font-size: 3rem; font-weight: 700; padding: 0; line-height: 1; }
 .ttt-cell.p-mine { color: var(--me); } .ttt-cell.p-theirs { color: var(--them); }
 .ttt-cell.line { background: color-mix(in srgb, var(--good) 25%, var(--card)); border-color: var(--good); animation: fx-glow 1s ease-in-out infinite; }
@@ -29,23 +30,23 @@
 .ttt-mark.draw path, .ttt-mark.draw circle { stroke-dasharray: 1; stroke-dashoffset: 1; animation: fx-stroke .26s ease-out forwards; }
 .ttt-mark.draw path:nth-child(2) { animation-delay: .2s; }
 .ttt-strike { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.ttt-strike line { stroke: #ffd84a; stroke-width: 9; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 7px #ffb703); animation: fx-stroke .5s ease-out .15s forwards; }
+.ttt-strike line { stroke: var(--gold); stroke-width: 9; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: fx-stroke .5s ease-out .15s forwards; }
 .ttt-cell:disabled { opacity: 1; cursor: default; }
 .ttt-cell.canplay:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
 
 /* Connect Four: a toy-yellow board with ink-outlined holes. Seat A is a ring, seat B a dot, so the two
    discs differ by shape as well as by color. */
-.c4-board { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 10px; border-radius: var(--r-lg); background: var(--gold); border: var(--bw-heavy) solid var(--edge); box-shadow: 0 var(--lift-lg) 0 var(--edge); }
+.c4-board { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--s-1); padding: var(--s-3); border-radius: var(--r-lg); background: var(--gold); border: var(--bw-heavy) solid var(--edge); box-shadow: 0 var(--lift-lg) 0 var(--edge); }
 .c4-col { --lift: 0px; display: flex; flex-direction: column; gap: 4px; padding: 0; background: transparent; border: 0; border-radius: var(--r-md); min-height: 0; box-shadow: none; }
-.c4-col:hover:not(:disabled) { background: rgba(29, 27, 46, .14); border: 0; box-shadow: none; }
+.c4-col:hover:not(:disabled) { background: var(--veil); border: 0; box-shadow: none; }
 .c4-col:active:not(:disabled) { transform: none; box-shadow: none; }
 .c4-col:disabled { opacity: 1; cursor: default; }
-.c4-disc { position: relative; aspect-ratio: 1; border-radius: 50%; background: var(--hole); border: var(--bw-heavy) solid var(--edge); box-shadow: inset 0 4px 0 rgba(29, 27, 46, .22); }
-.c4-disc.seat-0, .c4-disc.seat-1 { box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .22), inset 0 3px 0 rgba(255, 255, 255, .35); }
+.c4-disc { position: relative; aspect-ratio: 1; border-radius: 50%; background: var(--hole); border: var(--bw-heavy) solid var(--edge); box-shadow: inset 0 4px 0 var(--shade); }
+.c4-disc.seat-0, .c4-disc.seat-1 { box-shadow: inset 0 -4px 0 var(--shade), inset 0 3px 0 var(--shine); }
 .c4-disc.seat-0 { background: var(--seat-a); }
 .c4-disc.seat-1 { background: var(--seat-b); }
-.c4-disc.seat-0::after { content: ""; position: absolute; inset: 24%; border-radius: 50%; border: 4px solid rgba(255, 255, 255, .9); }
-.c4-disc.seat-1::after { content: ""; position: absolute; inset: 35%; border-radius: 50%; background: rgba(255, 255, 255, .95); }
+.c4-disc.seat-0::after { content: ""; position: absolute; inset: 24%; border-radius: 50%; border: 4px solid var(--mark); }
+.c4-disc.seat-1::after { content: ""; position: absolute; inset: 35%; border-radius: 50%; background: var(--mark); }
 /* A disc falls from above the board (--drop is set per disc), stretches on the way down, squashes and bounces twice. */
 .c4-disc.last { animation: c4drop .7s linear; }
 @keyframes c4drop {
@@ -57,11 +58,11 @@
   92%, 100% { transform: none; }
 }
 /* A winning four jump one after another (--i is the disc's place in the line). */
-.c4-disc.line { outline: 3px solid #fff; animation: c4win .8s ease-in-out calc(var(--i, 0) * 110ms) infinite; z-index: 1; }
+.c4-disc.line { outline: 3px solid var(--paper); animation: c4win .8s ease-in-out calc(var(--i, 0) * 110ms) infinite; z-index: 1; }
 .c4-disc.last.line { animation: c4drop .7s linear, c4win .8s ease-in-out calc(.7s + var(--i, 0) * 110ms) infinite; }
 @keyframes c4win {
   0%, 60%, 100% { transform: none; }
-  30% { transform: translateY(-22%) scale(1.1); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .22), inset 0 3px 0 rgba(255, 255, 255, .35), 0 6px 0 var(--edge); }
+  30% { transform: translateY(-22%) scale(1.1); box-shadow: inset 0 -4px 0 var(--shade), inset 0 3px 0 var(--shine), 0 6px 0 var(--edge); }
 }
 
 /* Dots and Boxes */
@@ -82,7 +83,7 @@
 .db-initial.mine { fill: var(--me); } .db-initial.theirs { fill: var(--them); }
 
 /* Memory Match */
-.mm-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.mm-board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s-2); }
 .mm-card { aspect-ratio: 3 / 4; padding: 0; font-size: 2rem; line-height: 1; border-width: 2px; background: var(--accent); color: var(--accent-fg); }
 .mm-card.up { background: var(--card); color: var(--fg); border-color: var(--accent); }
 .mm-card.mine { background: color-mix(in srgb, var(--me) 22%, var(--card)); border-color: var(--me); color: var(--fg); }
@@ -95,12 +96,12 @@
 
 /* Game-moment effects (js/fx.js does the particles; these are the in-place animations). */
 @keyframes fx-pop { 0% { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: none; } }
-@keyframes fx-flip { from { transform: rotateY(-100deg) scale(1.15); box-shadow: 0 10px 18px rgba(0, 0, 0, .35); } to { transform: none; } }
-@keyframes fx-match { 0% { transform: scale(1); } 35% { transform: scale(1.22) rotate(-4deg); box-shadow: 0 0 22px 6px #ffe27a; } 70% { transform: scale(.96) rotate(2deg); } 100% { transform: none; } }
+@keyframes fx-flip { from { transform: rotateY(-100deg) scale(1.15); box-shadow: 0 8px 0 var(--drop-shadow); } to { transform: none; } }
+@keyframes fx-match { 0% { transform: scale(1); } 35% { transform: scale(1.22) rotate(-4deg); box-shadow: 0 0 0 6px var(--gold-soft); } 70% { transform: scale(.96) rotate(2deg); } 100% { transform: none; } }
 @keyframes fx-stroke { to { stroke-dashoffset: 0; } }
 @keyframes fx-wave { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .6; transform: scale(1.12); } }
-@keyframes fx-glow { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 16px 4px var(--good); } }
-@keyframes fx-glow-disc { 0%, 100% { box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .3), 0 0 0 0 #fff; } 50% { box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .3), 0 0 14px 5px #fff; } }
+/* A pulse on transform only: it runs on the compositor, where a blurred box-shadow repaints on the main thread every frame. */
+@keyframes fx-glow { 0%, 100% { transform: none; } 50% { transform: scale(1.07); } }
 @keyframes fx-draw { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
 @keyframes fx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) {

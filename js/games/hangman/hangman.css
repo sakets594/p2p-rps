@@ -1,24 +1,55 @@
-/* Hangman screen. Colors come from css/style.css. */
+/* Hangman as a balloon ride over the sea (the scene is SVG in index.js). Wooden letter tiles, a keyboard of round
+   keys, marker fonts. The sky keeps its own colours in light and dark mode. */
 
-.hm { display: flex; flex-direction: column; gap: 12px; }
-.hm-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.hm-status { margin: 0; text-align: center; font-size: 1.15rem; min-height: 1.8em; }
+.hm { position: relative; display: flex; flex-direction: column; gap: 12px; }
+.hm-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font: 1rem/1.2 var(--font-marker); }
+.hm-score { padding: 4px 12px; border-radius: 999px; border: 2.5px solid var(--edge); background: var(--card); box-shadow: 0 3px 0 var(--edge); }
+.hm-score b { font-weight: 400; display: inline-block; min-width: .7em; text-align: center; }
+.hm-status { margin: 0; text-align: center; font: 1.25rem/1.25 var(--font-marker); min-height: 1.6em; }
 .hm-status.win { color: var(--good); } .hm-status.lose { color: var(--bad); }
 .hm-error { color: var(--bad); text-align: center; margin: 0; }
+.hm-error[hidden] { display: none; }
 
-.hm-gallows { width: 150px; height: 150px; margin: 0 auto; display: block; }
-.hm-gallows * { stroke: var(--fg); stroke-width: 4; stroke-linecap: round; fill: none; }
-.hm-gallows .part { display: none; stroke: var(--bad); }
-.hm-gallows .part.on { display: inline; }
+.hm-stage { position: relative; border-radius: 16px; overflow: hidden; border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink); }
+.hm-scene { display: block; width: 100%; height: auto; }
+.hm-left { position: absolute; right: 10px; top: 8px; font: 1rem/1 var(--font-marker); color: #1b1b2f; background: rgba(255, 255, 255, .8); border: 2px solid #1b1b2f; border-radius: 999px; padding: 4px 10px; }
+.hm-cloud ellipse { fill: #fff; stroke: #1b1b2f; stroke-width: 2; }
+.hm-clouds { animation: hm-drift 40s linear infinite alternate; }
+@keyframes hm-drift { to { translate: 30px 0; } }
+.hm-strings path { stroke: #1b1b2f; stroke-width: 1.2; fill: none; }
+.hm-balloon { transform-box: fill-box; transform-origin: 50% 100%; }
+.hm-balloon ellipse:first-child { stroke: #1b1b2f; stroke-width: 2; }
+.hm-shine { fill: #fff; opacity: .55; }
+.hm-knot { stroke: #1b1b2f; stroke-width: 1.2; }
+.hm-bunch { animation: hm-bob 2.6s ease-in-out infinite; }
+@keyframes hm-bob { 50% { translate: 0 -3px; } }
+.hm-basket path:first-of-type { fill: #b9773b; stroke: #1b1b2f; stroke-width: 2; stroke-linejoin: round; }
+.hm-weave { stroke: #7a4a22; stroke-width: 1.5; fill: none; }
+.hm-face { font-size: 22px; }
+.hm-fin path { fill: #5a6b7d; stroke: #1b1b2f; stroke-width: 2; }
+.hm-sea { fill: #2b84d6; stroke: #1b1b2f; stroke-width: 2; animation: hm-wave 3s ease-in-out infinite alternate; }
+.hm-sea2 { fill: #1d6ab3; animation: hm-wave 2.2s ease-in-out infinite alternate-reverse; }
+@keyframes hm-wave { to { translate: -14px 0; } }
 
-.hm-word { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; }
-.hm-letter { width: 1.6em; height: 2em; border-bottom: 3px solid var(--fg); text-align: center; font-size: 1.6rem; font-weight: 700; line-height: 2em; text-transform: uppercase; }
-.hm-letter.unknown { color: var(--muted); opacity: .6; }
+/* Wooden letter tiles */
+.hm-word { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; perspective: 400px; }
+.hm-letter {
+  width: 1.7em; height: 2em; display: grid; place-items: center; font: 1.6rem/1 var(--font-marker); text-transform: uppercase; color: #3b2210;
+  background: linear-gradient(180deg, #f6d9a8, #e0b77a); border: 2.5px solid #3b2210; border-radius: 6px; box-shadow: 0 4px 0 #3b2210;
+}
+.hm-letter:empty { background: rgba(0, 0, 0, .12); border-style: dashed; box-shadow: none; }
+.hm-letter.unknown { color: #a0835e; }
 
 .hm-pick { display: flex; gap: 8px; }
-.hm-pick input { flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+.hm-pick[hidden] { display: none; }
+.hm-pick input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 3px solid var(--edge); background: #fff3a6; color: #1b1b2f; font: 1.2rem/1 var(--font-marker); }
+.hm-pick button { font: 1.1rem/1 var(--font-marker); }
 
 .hm-keys { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.hm-keys button { padding: 8px 0; font-weight: 700; text-transform: uppercase; }
-.hm-keys button.right { background: color-mix(in srgb, var(--good) 25%, var(--card)); border-color: var(--good); }
-.hm-keys button.wrong { background: color-mix(in srgb, var(--bad) 22%, var(--card)); border-color: var(--bad); }
+.hm-keys[hidden] { display: none; }
+.hm-keys button { aspect-ratio: 1; padding: 0; border-radius: 50%; font: 1.15rem/1 var(--font-marker); text-transform: uppercase; }
+.hm-keys button.right { background: #2ec27e; color: #fff; border-color: var(--edge); }
+.hm-keys button:disabled { opacity: 1; }
+.hm-keys button.wrong { background: #ff4d6d; color: #fff; border-color: var(--edge); opacity: .55 !important; text-decoration: line-through; }
+.hm-next { align-self: center; font: 1.15rem/1 var(--font-marker); min-width: 200px; }
+@media (prefers-reduced-motion: reduce) { .hm-clouds, .hm-bunch, .hm-sea, .hm-sea2 { animation: none; } }

@@ -1,18 +1,63 @@
 @import url('./hands-tube.css');
 
-/* Rock Paper Scissors screen. Colors come from the theme variables in css/style.css. */
+/* Rock Paper Scissors as fight night: a dark arena with spotlights and a ring floor, a fighter scoreboard in the
+   seat colours, a pulsing VS until the first hand comes up, and big arcade buttons. Keeps its own colours in light
+   and dark mode. The hands and the ROCK / PAPER / SCISSORS / SHOOT! sequence are hands-tube.js. */
 
-.rps { display: flex; flex-direction: column; gap: 16px; }
+.rps { display: flex; flex-direction: column; gap: 14px; }
+.rps.arena {
+  position: relative; padding: var(--s-3); border-radius: 20px; color: #f3eeff; border: 3px solid #07040f; box-shadow: 0 6px 0 #07040f;
+  background:
+    conic-gradient(from 195deg at 20% -5%, transparent 0 7deg, rgba(255, 240, 200, .1) 7deg 15deg, transparent 15deg),
+    conic-gradient(from 150deg at 80% -5%, transparent 0 7deg, rgba(255, 240, 200, .1) 7deg 15deg, transparent 15deg),
+    linear-gradient(180deg, #1c0f3a, #0b0618 70%);
+}
 
-.rps .score { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
-.rps .score > div { display: flex; flex-direction: column; min-width: 0; }
-.rps .n { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+/* Fighter scoreboard */
+.rps .score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: stretch; text-align: center; }
+.rps .fighter { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; min-width: 0; border: 3px solid #07040f; box-shadow: 0 4px 0 #07040f; }
+.rps .fighter[data-seat="0"] { background: linear-gradient(135deg, #ef3e5c, #a51d3a); }
+.rps .fighter[data-seat="1"] { background: linear-gradient(225deg, #1190e8, #0b5a9a); }
+.rps .who { font: 400 .95rem/1.1 var(--font-game); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; }
+.rps .fighter .n { font: 400 2rem/1 var(--font-game); color: #fff; -webkit-text-stroke: 1.5px #07040f; paint-order: stroke fill; }
+.rps .mid { display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 0 4px; }
+.rps .round-label { font: 400 .95rem/1 var(--font-game); color: #ffd84a; white-space: nowrap; }
+.rps .draws { font: 700 .75rem/1 var(--font); color: #b9a8ff; white-space: nowrap; }
+.rps .draws b { font: 400 .95rem/1 var(--font-game); color: #fff; }
 
-.rps .status { margin: 0; font-size: 1.3rem; min-height: 2em; }
+.rps .status { margin: 0; font: 400 1.3rem/1.2 var(--font-game); letter-spacing: .02em; min-height: 1.6em; color: #fff; }
+.rps .status.win { color: #7dffb0; } .rps .status.lose { color: #ff8f8f; }
 
-.rps .moves { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.rps .move { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px; }
-.rps .move .emoji { font-size: 2.2rem; line-height: 1; }
-.rps .move.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); opacity: 1; }
+/* The ring: a spotlit floor under the hands */
+.rps .ring { position: relative; border-radius: 14px; overflow: hidden; border: 3px solid #07040f;
+  background: radial-gradient(70% 55% at 50% 38%, rgba(255, 240, 200, .14), transparent 70%), linear-gradient(180deg, #1a1236 0 72%, #2b1d55 72%); }
+.rps .ring::after { content: ''; position: absolute; left: 0; right: 0; top: 72%; height: 4px; background: repeating-linear-gradient(90deg, #ffd84a 0 18px, #ef3e5c 18px 36px, #1190e8 36px 54px); opacity: .8; }
+.rps .hands { border-radius: 0; background: transparent; position: relative; z-index: 1; }
+.rps .vs { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 14px; pointer-events: none; opacity: 0; transition: opacity .3s; }
+.rps .ring.idle .vs { opacity: 1; }
+.rps .vs b { font: 900 4rem/1 var(--font-neon); color: #ffd84a; -webkit-text-stroke: 3px #07040f; paint-order: stroke fill; text-shadow: 4px 4px 0 #07040f; }
+.rps .vs span { font-size: 3rem; }
+.rps .vs span:first-child { animation: rps-jab 1s ease-in-out infinite; }
+.rps .vs span:last-child { scale: -1 1; animation: rps-jab 1s ease-in-out .5s infinite; }
+@keyframes rps-jab { 50% { translate: 8px 0; } }
+.rps-call { font-family: var(--font-game) !important; font-weight: 400 !important; }
 
-.rps .hands { border-radius: 12px; background: radial-gradient(circle at 50% 35%, var(--bg), var(--card)); }
+/* Arcade buttons */
+.rps .moves { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.rps .moves[hidden] { display: none; }
+.rps .move {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px 12px; border-radius: 18px;
+  font: 400 1rem/1 var(--font-game); color: #fff; border: 3px solid #07040f; box-shadow: 0 6px 0 #07040f;
+  background: linear-gradient(180deg, #4b3aa8, #2c2380);
+}
+.rps .move:nth-child(1) { background: linear-gradient(180deg, #ff7a59, #d6452a); }
+.rps .move:nth-child(2) { background: linear-gradient(180deg, #2ec27e, #14894f); }
+.rps .move:nth-child(3) { background: linear-gradient(180deg, #4f8bff, #2557c9); }
+.rps .move:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #07040f; }
+.rps .move .emoji { font-size: 2.4rem; line-height: 1; }
+.rps .move.selected { outline: 4px solid #ffd84a; outline-offset: 2px; opacity: 1; }
+.rps .next { align-self: center; min-width: 200px; font: 400 1.1rem/1 var(--font-game); background: linear-gradient(180deg, #ffe066, #ffb703); color: #1a0b00; border: 3px solid #07040f; box-shadow: 0 5px 0 #07040f; }
+@media (prefers-reduced-motion: reduce) { .rps .vs span { animation: none; } }
+/* Sleeve colours follow the seats too (hands-tube.css defaults them to indigo and pink). */
+.rps[data-seat="0"] .tube-stage { --me: #ef3e5c; --them: #1190e8; }
+.rps[data-seat="1"] .tube-stage { --me: #1190e8; --them: #ef3e5c; }

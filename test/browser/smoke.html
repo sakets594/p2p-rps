@@ -246,7 +246,7 @@ await test('hangman: the setter picks a word, the guesser finds it, both see the
   }
   await until('round over on both', () => /found/i.test(text(guesser, '.hm-status')) && /found/i.test(text(setter, '.hm-status')), 5000);
   assert([...guesser.querySelectorAll('.hm-letter')].map((e) => e.textContent).join('') === 'cat', 'word shown');
-  assert(guesser.querySelectorAll('.hm-gallows .part.on').length === 1, 'one wrong letter drawn');
+  assert(guesser.querySelectorAll('.hm-balloon.gone').length === 1, 'one wrong letter pops one balloon');
   p.destroy();
 });
 

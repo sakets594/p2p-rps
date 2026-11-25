@@ -1,0 +1,40 @@
+/* Tic-Tac-Toe on a chalkboard: a slate in a wooden frame, chalk grid lines that draw themselves in, chalky marks
+   (an SVG displacement filter on the strokes) and a chalk tray. Keeps its own colours in light and dark mode. */
+
+.tg.chalk { position: relative; --chalk-ink: #f6f3e8; --slate: #24443a; }
+.tg.chalk .tg-p {
+  background: transparent; color: var(--fg); border: 2.5px dashed color-mix(in srgb, var(--fg) 45%, transparent); box-shadow: none;
+  font-family: var(--font-marker);
+}
+.tg.chalk .tg-p b { font-weight: 400; font-size: 1.05rem; }
+.tg.chalk .tg-p.active { background: var(--chip); color: var(--on-seat); border-style: solid; border-color: var(--edge); box-shadow: 0 4px 0 var(--edge); }
+.tg.chalk .tg-status { font: 1.35rem/1.2 var(--font-marker); }
+
+.ttt-slate {
+  position: relative; padding: 14px; border-radius: 12px; aspect-ratio: 1;
+  background:
+    radial-gradient(60% 40% at 30% 25%, rgba(255, 255, 255, .07), transparent 70%),
+    radial-gradient(50% 35% at 75% 70%, rgba(255, 255, 255, .05), transparent 70%),
+    var(--slate);
+  border: 12px solid #8a5a33; outline: 3px solid var(--ink); box-shadow: inset 0 0 0 3px rgba(0, 0, 0, .35), 0 8px 0 var(--ink);
+  background-clip: padding-box;
+}
+.tg.chalk .ttt-board { position: absolute; inset: 14px; gap: 0; z-index: 1; }
+.tg.chalk .ttt-cell {
+  --lift: 0px; background: transparent; border: 0; border-radius: 10px; box-shadow: none; color: var(--chalk, var(--chalk-ink));
+}
+.tg.chalk .ttt-cell:hover:not(:disabled) { transform: none; box-shadow: none; }
+.tg.chalk .ttt-cell.canplay:hover:not(:disabled) { background: rgba(255, 255, 255, .06); }
+.tg.chalk .ttt-cell.line { background: rgba(255, 226, 122, .12); border: 0; animation: none; }
+.tg.chalk .ttt-mark { width: 70%; height: 70%; stroke-width: 9; filter: url(#ttt-chalk); opacity: .94; overflow: visible; }
+.tg.chalk .ttt-mark.draw path { animation-duration: .3s; }
+.ttt-grid { position: absolute; inset: 14px; width: calc(100% - 28px); height: calc(100% - 28px); pointer-events: none; overflow: visible; filter: url(#ttt-chalk); }
+.ttt-grid path { fill: none; stroke: var(--chalk-ink); stroke-width: 5; stroke-linecap: round; opacity: .85; stroke-dasharray: 1; stroke-dashoffset: 1; animation: fx-stroke .35s ease-out forwards; }
+.ttt-grid path:nth-child(1) { animation-delay: .9s; } .ttt-grid path:nth-child(2) { animation-delay: 1.1s; }
+.ttt-grid path:nth-child(3) { animation-delay: 1.3s; } .ttt-grid path:nth-child(4) { animation-delay: 1.5s; }
+.tg.chalk .ttt-strike line { stroke: #ffe27a; stroke-width: 10; filter: url(#ttt-chalk); }
+.ttt-tray { position: absolute; left: 10%; right: 10%; bottom: -24px; height: 10px; border-radius: 3px; background: #6b4426; border: 2px solid var(--ink); z-index: 2; }
+.ttt-tray i { position: absolute; top: -7px; width: 34px; height: 8px; border-radius: 3px; background: #fffbe8; border: 1.5px solid #c9c2a8; }
+.ttt-tray i:first-child { left: 18%; rotate: -4deg; } .ttt-tray i:last-child { left: 58%; width: 22px; background: #ffb3c6; rotate: 6deg; }
+.tg.chalk .ttt-slate { margin-bottom: 18px; }
+@media (prefers-reduced-motion: reduce) { .ttt-grid path { animation: none; stroke-dashoffset: 0; } }
