@@ -4,3 +4,4 @@ node_modules/
 !.claude/skills/
 brag-output/
 graphify-out/
+test-results/

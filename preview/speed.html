@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOOL - frame timing for every game</title>
+<!-- Speed check. Loads each game's bot demo (game-demo.html, Alice's screen only) in a frame that fills this window, lets
+     the bots play for 3 s, then records every requestAnimationFrame interval for `secs` seconds. Run it in Firefox.
+       ?games=rps,tron   only these ids (default: every ready game)
+       ?runs=3           play each game this many times and keep the middle result (default 1)
+       ?secs=12          seconds measured per game
+       ?zoom=2           retina emulation: make the window 2880x1800 first; the frame renders at half that size, zoomed x2
+       ?hide=.bs-sweep   hide elements matching this selector inside the game (to find which layer is slow)
+     Results show on the page and in window.__speed = {done, now, idle, results}. Not part of the site. -->
+<style>
+  body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #0d0a1f; color: #ece9f7; }
+  iframe { border: 0; display: block; }
+  #out { padding: 16px; }
+  table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td, th { padding: 4px 10px; text-align: left; border-bottom: 1px solid #2e2a47; }
+  .bad { color: #ff7a70; } .warn { color: #f0b85a; } .ok { color: #5fd08f; }
+</style>
+</head>
+<body>
+<div id="out">Measuring… keep this window in front.</div>
+<script type="module">
+import {GAMES} from '../js/games.js';
+
+const q = new URLSearchParams(location.search);
+const ids = q.get('games')?.split(',') ?? GAMES.filter((g) => g.status === 'ready').map((g) => g.id);
+const runs = Number(q.get('runs') ?? 1), secs = Number(q.get('secs') ?? 12), zoom = Number(q.get('zoom') ?? 1), hide = q.get('hide');
+// Limits: a frame over 25 ms is a visible stutter; over 100 ms a player sees the game stop.
+const LIMIT = zoom > 1 ? {late: 5, freeze: Infinity} : {late: 2, freeze: 100};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const out = document.getElementById('out');
+window.__speed = {done: false, now: '', idle: null, results: []};
+
+function sample(win, ms) {
+  return new Promise((res) => {
+    const d = [], at = [];
+    let last = win.performance.now();
+    const t0 = last;
+    const f = (t) => { d.push(t - last); at.push(t - t0); last = t; if (t - t0 < ms) win.requestAnimationFrame(f); else res({d, at}); };
+    win.requestAnimationFrame(f);
+  });
+}
+function summary({d, at}) {
+  const s = [...d].sort((a, b) => a - b), pick = (p) => s[Math.min(s.length - 1, Math.floor(p * s.length))];
+  const perSecond = Array.from({length: Math.ceil(secs)}, (_, i) => Math.round(Math.max(0, ...d.filter((_, j) => at[j] >= i * 1000 && at[j] < (i + 1) * 1000))));
+  return {frames: d.length, p50: +pick(0.5).toFixed(1), p95: +pick(0.95).toFixed(1), p99: +pick(0.99).toFixed(1),
+    longest: Math.round(s.at(-1)), late: +(100 * d.filter((x) => x > 25).length / d.length).toFixed(1), perSecond};
+}
+const middle = (list) => [...list].sort((a, b) => a.late - b.late)[Math.floor(list.length / 2)];
+
+async function measure(id) {
+  const f = document.createElement('iframe');
+  f.style.cssText = `width:${innerWidth / zoom}px;height:${innerHeight / zoom}px;zoom:${zoom}`;
+  f.src = `game-demo.html?game=${id}&t=${Date.now()}`;
+  document.body.prepend(f);
+  try {
+    for (let i = 0; i < 200 && !f.contentWindow?.__demo; i++) await sleep(50);
+    const w = f.contentWindow;
+    if (!w.__demo?.run) throw new Error('no bot in preview/demo-bots.js');
+    w.document.querySelectorAll('.col')[1].style.display = 'none';
+    if (hide) w.document.head.insertAdjacentHTML('beforeend', `<style>${hide} { display: none !important; }</style>`);
+    w.__demo.run().catch(() => {});
+    await sleep(3000);
+    const r = summary(await sample(w, secs * 1000));
+    r.lighter = !!w.document.querySelector('.lite, .flat');
+    return r;
+  } finally { f.remove(); await sleep(500); }
+}
+
+function render() {
+  const {idle, results} = window.__speed;
+  const rows = results.map((r) => {
+    if (r.error) return `<tr><td>${r.game}</td><td class="bad" colspan="5">${r.error}</td></tr>`;
+    return `<tr><td>${r.game}</td><td class="${r.status}">${r.status}</td><td>${r.late}%</td><td>${r.longest} ms</td><td>${r.p95} ms</td><td>${r.perSecond.join(' ')}${r.lighter ? ' (switched to lighter look)' : ''}</td></tr>`;
+  }).join('');
+  out.innerHTML = `<p>${zoom > 1 ? 'Retina emulation' : 'Normal screen'}, ${innerWidth / zoom}x${innerHeight / zoom}, ${runs} run(s), ${secs} s each.
+    Empty page: ${idle ? `${idle.late}% late, longest ${idle.longest} ms, p95 ${idle.p95} ms` : '…'}.
+    ${window.__speed.done ? 'Done.' : `Now: ${window.__speed.now}`}</p>
+    <table><tr><th>Game</th><th>Status</th><th>Late frames</th><th>Longest</th><th>p95</th><th>Worst frame each second (ms)</th></tr>${rows}</table>`;
+}
+
+window.__speed.now = 'empty page';
+render();
+window.__speed.idle = summary(await sample(window, 5000));
+for (const game of ids) {
+  window.__speed.now = game;
+  render();
+  try {
+    const all = [];
+    for (let i = 0; i < runs; i++) all.push(await measure(game));
+    const r = middle(all);
+    r.status = r.late > LIMIT.late ? 'bad' : r.longest > LIMIT.freeze ? 'warn' : 'ok';
+    r.runs = all.map((x) => ({late: x.late, longest: x.longest}));
+    window.__speed.results.push({game, ...r});
+  } catch (e) { window.__speed.results.push({game, error: String(e.message ?? e)}); }
+}
+window.__speed.done = true;
+render();
+</script>
+</body>
+</html>

@@ -66,7 +66,8 @@ const mainText = await read(`document.body.innerText.slice(0, 200)`);
 const mainOk = pageErrors.length === 0 && /room/i.test(mainText ?? '');
 console.log(`${mainOk ? 'PASS' : 'FAIL'}  main page loads and shows the room screen${pageErrors.length ? `\n      ${pageErrors.join(' | ')}` : ''}`);
 const registry = await read(`fetch('js/games.js?nocache=${Date.now()}', {cache: 'reload'}).then((r) => r.text())`);
-const READY_IDS = ['rps', 'cup-pong', 'tic-tac-toe', 'connect-four', 'dots-and-boxes', 'memory-match', 'battleship', 'hangman', 'trivia-duel'];
+const READY_IDS = ['rps', 'cup-pong', 'tic-tac-toe', 'connect-four', 'dots-and-boxes', 'memory-match', 'battleship', 'hangman', 'trivia-duel', 'draw-guess',
+  'blind-draw', 'emoji-charades', 'tron', 'quick-draw'];
 const regOk = READY_IDS.every((id) => new RegExp(`id:\\s*'${id}'`).test(registry ?? ''));
 console.log(`${regOk ? 'PASS' : 'FAIL'}  the served game list has all ${READY_IDS.length} games`);
 await cdp('Page.navigate', {url});

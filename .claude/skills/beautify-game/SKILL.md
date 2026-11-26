@@ -24,9 +24,10 @@ visible consequence. Rules and match files stay untouched; only the view, its CS
    backgrounds. Follow [the house rules](house-rules.md). *Done when* every event from step 1 has its answer on screen.
 4. **Look hard.** Record a bot match in Firefox and read a 12-frame contact sheet, then screenshot the opening, mid-game and
    end at full size. Fix what you see: clipped text, things that vanish mid-move, results shown before their animation,
-   colours that differ between the two screens, controls below the fold. *Done when* a full pass finds nothing.
-5. **Measure.** In Firefox, sample `requestAnimationFrame` over 12 s of bot *play* with the second column hidden, and compare
-   with the old version the same way. *Done when* p95 is at most 18.5 ms. To find a culprit, hide one layer at a time.
+   colours that differ between the two screens, controls below the fold. Then run the `game-check` skill's layout check
+   (real room, phone and laptop). *Done when* a full pass finds nothing.
+5. **Measure.** Run the `game-check` skill's speed and sound checks on the old version and the new one. *Done when* the
+   new version passes both and has no more late frames than the old.
 6. **Prove it.** `npm test`, `npm run smoke`, then `node scripts/live-p2p.mjs http://localhost:8000/` (real room, real
    WebRTC). *Done when* all three pass; a test changed on purpose is named in the report.
 7. **Show it.** Re-encode the clip and poster into `assets/gameplay/`, update the README and run `graphify update .`.
